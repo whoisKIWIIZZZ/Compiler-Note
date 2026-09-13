@@ -1,1 +1,8 @@
 test.cpp
+.DS_Store
+__MACOSX/
+.AppleDouble
+._*
+slides/
+resources/
+*.pdf
