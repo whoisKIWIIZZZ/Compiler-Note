@@ -167,7 +167,7 @@ $P$是产生式集合,$S$是开始符号,$ forall s in S ,exists chevron.l alpha
     [1型文法],
     [上下文有关文法 \ Context-Sensitive Grammar],
     [$alpha arrow.r beta$，$1 <= abs(alpha) <= abs(beta)$，\ $alpha in (V_N union V_T)^+$，$beta in (V_N union V_T)^*$],
-    [左边长度不能大于右边（除了S→ε），不能越变越少],
+    [左边长度不能大于右边（除了$S→ε$），不能越变越少],
 
     [2型文法],
     [上下文无关文法 \ Context Free Grammar],
@@ -190,10 +190,10 @@ $P$是产生式集合,$S$是开始符号,$ forall s in S ,exists chevron.l alpha
 
 #figure(image("/assets/image-4.png", width: 50%))
 
-
 == 语言的形式定义
 
 === 推导
+
 #definition[直接推导][
     如果 $alpha -> beta$ 是文法G的一条产生式，而 $gamma, delta$ 是 $(V_T union V_N)^*$ 中任意一个符号串，则将 $alpha -> beta$ 作用于符号串 $gamma alpha delta$ 上得到符号串 $gamma beta delta$ ，
     称符号串 $gamma beta delta$ 是符号串 $gamma alpha delta$ 的*直接推导*，记为
@@ -206,28 +206,31 @@ $P$是产生式集合,$S$是开始符号,$ forall s in S ,exists chevron.l alpha
     - 文法范畴只涉及符号串的构成，不涉及符号串的含义，但会影响语义处理。
 ]
 
-// TODO：n步推导
-直接推导的逆过程称为直接归约，即由符号串 $gamma beta delta$ 可直接归约
+
+直接推导的逆过程称为*直接归约*，即由符号串 $gamma beta delta$ 可直接归约
 到 $gamma alpha delta$。
 
-考虑
-$alpha_0,dots,alpha_n in (cv_T cup cv_N)^star,$且$alpha_0 ==> alpha_1 ==> dots alpha_(n-1) ==> alpha_n$,
-可以简记成n步推导,$alpha_0 =>^+ alpha_n$.如果$n=0$,还能写成$alpha_0 =>^star alpha_n$.
+#definition[n步推导][考虑
+    $alpha_0,dots,alpha_n in (cv_T cup cv_N)^star,$且$alpha_0 ==> alpha_1 ==> dots alpha_(n-1) ==> alpha_n$,
+    可以简记成n步推导,$alpha_0 =>^+ alpha_n$.如果$n=0$,还能写成$alpha_0 =>^star alpha_n$.]
 
-
-然后由一连串定义
-#definition[
-    - $cg[S] = al cv_N,cv_T,P,S ar and S =>^star u$,则称$u$是文法$cg[S]$的*句型*.
-    - 进一步,$u in cv_T^*$,它是$cg[S]$的*句子*.
-    - $L(cg[S]) eq.delta {u|S =>^star u and u in cv_T^*}$是$cg$产生的*语言*.
+#definition[句型，句子，语言的形式化定义][
+    - $cg[S] = al cv_N,cv_T,P,S ar and S =>^star u$,则称$u$是文法$cg[S]$的*句型*.进一步,如果$u in cv_T^*$,则它是$cg[S]$的*句子*.
+    - $L(cg[S]) eq.delta {u|S =>^star u and u in cv_T^*}$是$cg$产生的*语言*.（也就是说，*从开始符号经过任意步推导可得到的终结符号串集合*）
 ]
 
+#remark[正如函数有表达式和定义域，语言的形式化描述中，“形式”和“限定条件”都很重要。例如：$L(G[S]) = { a^n b^n c^m | n>=1，m>=0 }$]
 
-=== 为语言构造文法
+== 为语言构造文法
 
-给定一个$L$,我们构造$cg[S]$.
+本节讲述：给定一个$L$，如何构造$cg[S]$。
+
+如果满足以下两点，则构造出的文法就是所求文法：
+- 语言的所有句子都能由文法的开始符号推导得到。
+- 文法开始符号推导出的所有终结符号串都是语言的句子。
+
 #example[
-    $L(cg[S])={ \(^n \)^n|n in RR^+},$找到#cg.
+    给定$L(cg[S])={ \(^n \)^n|n in RR^+},$找到#cg.
 
     显然$\(\)和 epsilon$都会被生成.归纳的发现,$S ->(S)$也可以,这样就凑好了
     $
@@ -235,7 +238,6 @@ $alpha_0,dots,alpha_n in (cv_T cup cv_N)^star,$且$alpha_0 ==> alpha_1 ==> dots 
         P = {S -> (S)|epsilon}.
     $
 ]
-
 
 === 语法树
 #definition[
@@ -258,7 +260,9 @@ $alpha_0,dots,alpha_n in (cv_T cup cv_N)^star,$且$alpha_0 ==> alpha_1 ==> dots 
 - $L$是语法分析树生成的终结符号串的集合.
 
 
-当然同一个符号串可以用不同序列推导.考虑*最左*和*最右*的,就是每一次推导中,替换*最左边*或者*最右边*的那一个.
+当然同一个符号串可以用不同序列推导，这不利于计算机构建语法树。
+
+#definition[*最左推导*和*最右推导*][每一次推导中，替换*最左边*或者*最右边*的那一个非终结符号。]
 
 === 递归
 #definition[
@@ -271,7 +275,13 @@ $alpha_0,dots,alpha_n in (cv_T cup cv_N)^star,$且$alpha_0 ==> alpha_1 ==> dots 
 - 运算符结合顺序问题,左(右)结合在文法中体现为左(右)递归.
 - 运算符优先级:语法树的高层或底层
 
+=== 等价文法
+如果两个文法G1和G2产生的语言是相同的，则称这两个文法G1和G2是等价文法。
+
+
 === 问题
-- 二义性
-- 压缩
-- \@ zmy 解决
+- 二义性：如果文法 G 中的某一个句子存在不止一颗不同的语法树，也就是有两个不同的最左或最右推导，则此文法便具有二义性。当编译程序对二义性文法生成的句子结构进行语法分析时，就会产生两种甚至更多种不同的理解，一定会导致语义处理上的不确定性。解决方法是在语义上加些限制（消歧规则），或是重新构造一个等价的文法（这不是废话吗）。#unim[组米的联想：这有点类似于 cpp 中的 undefined behavior，虽然本质不同，文法的二义性与 cpp 的 UB 都会导致同一段代码有不同的解释。]
+- 压缩：文法不能含有有害产生式、文法不能含有多余产生式（不可达非终结符号、无法推导出终结符号串）。
+
+// ？？？问题原来是“学习中遇到的问题”而非与“文法”、“语言”并列的“问题”
+
