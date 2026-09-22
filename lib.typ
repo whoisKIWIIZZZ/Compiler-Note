@@ -15,6 +15,8 @@
 #import "@preview/marginalia:0.3.1" as marginalia
 #import "@preview/marginalia:0.3.1": wideblock
 
+#show strong: set text(fill: rgb("e53985"))
+
 // --- 状态与注释组件 ---
 #let _sidebar-state = state("_sidebar-state", true)
 #let _note-style-state = state("_note-style-state", "thmbox")
