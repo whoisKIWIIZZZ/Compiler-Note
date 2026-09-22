@@ -110,23 +110,22 @@ $I_a$ 能确定 NFA 中状态子集间的映射，也就是即将构造的 DFA �
 === 构造
 我们假定一个$NN = al Q',Sigma' ,pas', Q_0,qh ar$,下面考察如何构造一个$DD$.
 #proposition[
-  考察这样的$DD = al Q, Sigma,pas,q_0,F ar$,
-  - $Sigma = Sigma'$;
-  - $q_0 = epsilon"-CLOSURE"(Q_0)$;
-    - *注意,这里的$Q$由$Q'$ poset里的元素构成*,也就是说$Q subset.eq 2^(Q')$.
-  - $forall q in Q => q in 2^(Q'). forall a in Sigma,$
-    $
-      pas(q, a) = epsilon"-CLOSURE"(union.big_(s in q)(pas'(s,a)))
-    $
-    - 新的$NN$的状态，都是是$DD$的状态构成的集合；
-    - 对于$al q,a ar$的转移：让集合 $q$ 的每一个 NFA 状态 $s$ 都去读取字符$a$，各自达到新状态，然后把这些状态取并集；对这个并集再求$epsilon$闭包。
-    - 再转换成 DFA 中的状态转换，直至 DFA 不再
-  有新的状态产生为止。
-  - $F={S|S in Q and  S inter qh eq.not diameter}$
+    考察这样的$DD = al Q, Sigma,pas,q_0,F ar$,
+    - $Sigma = Sigma'$;
+    - $q_0 = epsilon"-CLOSURE"(Q_0)$;
+        - *注意,这里的$Q$由$Q'$ poset里的元素构成*,也就是说$Q subset.eq 2^(Q')$.
+    - $forall q in Q => q in 2^(Q'). forall a in Sigma,$
+        $
+            pas(q, a) = epsilon"-CLOSURE"(union.big_(s in q)(pas'(s,a)))
+        $
+        - 新的$NN$的状态，都是是$DD$的状态构成的集合；
+        - 对于$al q,a ar$的转移：让集合 $q$ 的每一个 NFA 状态 $s$ 都去读取字符$a$，各自达到新状态，然后把这些状态取并集；对这个并集再求$epsilon$闭包。
+        - 再转换成 DFA 中的状态转换，直至 DFA 不再有新的状态产生为止。
+    - $F={S|S in Q and S inter qh eq.not diameter}$
 ]
 #unim[这里其实蛮像通用图灵机来模拟非确定图灵机的构造的]
 #example[
-  这里由yyl整理
+    #figure(image("/assets/image-11.png", width: 60%))
 ]
 
 === DFA的化简
@@ -137,141 +136,201 @@ $I_a$ 能确定 NFA 中状态子集间的映射，也就是即将构造的 DFA �
 
 下面来看如何构造划分：
 #proposition([
-  我们说两个*状态*$p <==> q$,说的是$p,q$分别出发识别$alpha in Sigma^star$都能halt.
+    我们说两个*状态*$p <==> q$,说的是$p,q$分别出发识别$alpha in Sigma^star$都能halt.
 
-  构造等价划分的方法是:$p,q$同属于一个子集合,iff,$
-  forall a in Sigma,pas(p,a),pas(q,a) "到达当前划分的同一个子集合"
-  $
-  也就是说，如果这两个状态在任意的输入下都达到被划分的同一个子集合，那么这两个状态*等价*；否则它们应当属于不同划分。
+    构造等价划分的方法是:$p,q$同属于一个子集合,iff,$ forall a in Sigma,pas(p, a),pas(q, a) "到达当前划分的同一个子集合" $
+    也就是说，如果这两个状态在任意的输入下都达到被划分的同一个子集合，那么这两个状态*等价*；否则它们应当属于不同划分。
 ])
-#example[
-  #image("/assets/image-8.png")
-  化简后:
-  #image("/assets/image-9.png")
-  可以看到$I,J$被合并了。
+
+#algorithm[DFA的化简][
+    - 构成初始划分 $pi_0$
+        - 将 $Q$ 划分为两个子集：终态子集和非终态子集，记作 $pi_0 = { Q_1, Q_2, dots, Q_n }$。
+    - 对 $pi_k$ 按下述方法构造新的划分 $pi_(k+1)$
+        - for $pi_k$ 中的每一子集 $Q_i$ do
+            - 划分 $Q_i$，使得状态 $p$、$q$ 并入 $pi_k$ 的同一子集，iff $forall a in Sigma$，$t(p,a)$ 和 $t(q,a)$ 都到达 $pi_k$ 的同一子集中；否则，对 $Q_i$ 进行划分，使 $p$ 和 $q$ 属于划分后的不同子集；
+            - 将经上述划分后的子集并入 $pi_(k+1)$。
+    - 若 $pi_(k+1) eq.not pi_k$，则用 $pi_(k+1)$ 替代 $pi_k$，重复上述过程；否则，划分过程终止。
+
+    最终划分记作 $pi_i$。化简后的 DFA $M'$ 中：
+
+    #table(
+        columns: (auto, 1fr),
+        align: (center, left),
+        table.header([组成], [取法]),
+        [$Q'$], [$Q'$ 的状态数即最终划分 $pi_i$ 的子集个数。取 $pi_i$ 中每个子集中的一个状态代表该子集。],
+        [$q_0'$], [$pi_i$ 中含 $q_0$ 的子集。],
+        [$F'$], [包含 $F$ 中任一状态的子集的代表状态的集合。],
+        [$Sigma'$], [$Sigma' = Sigma$。],
+        [$t'$], [$pi_i$ 中子集到子集（代表状态）之间的转换；子集中其它状态的转换关系全部转换到代表状态上。],
+        [不可达状态], [去掉不可达状态。],
+    )
 ]
-// TODO:完整的方法
+
+
+#example[
+    #grid(
+        columns: (1fr, 1fr),
+        column-gutter: 1em,
+        image("/assets/dfa-minimize-before.png", width: 100%), image("/assets/dfa-minimize-after.png", width: 100%),
+    )
+
+    $
+        pi_1 = { Q_1 = {F, G, H}, quad Q_2 = {I, J} } \
+        because quad Q_1 "中"：quad t(F, 1)=G in Q_1, quad t(G, 1)=H in Q_1, quad t(H, 1)=J in Q_2, \
+        therefore quad "分解" Q_1 "为" Q_11 = {F, G}, quad Q_12 = {H} \
+        "得" pi_2 = { Q_11 = {F, G}, quad Q_12 = {H}, quad Q_2 = {I, J} } \
+        because quad Q_11 "中"：quad t(F, 0)=G in Q_11, quad t(G, 0)=I in Q_2, \
+        therefore quad "将" Q_11 "分割成" Q_111={F}, quad Q_112={G} \
+        "得" pi_3 = { Q_111 = {F}, quad Q_112 = {G}, quad Q_12 = {H}, quad Q_2 = {I, J} } \
+        because quad Q_2 "中"：quad t(I, 0)=I in Q_2, quad t(J, 0)=I in Q_2, quad t(I, 1)=J in Q_2, quad t(J, 1)=J in Q_2, \
+        therefore quad I "和" J "等价。" quad "最终划分为" pi_3 "。"
+    $
+]
+
 
 == FA与正规文法
 由线性正规文法$cg[S]=chevron.l cal(V)_N,cal(V)_T,P,S chevron.r$可直接构造出一个$AA= al Q, Sigma,pas,q_0,qh ar$.
 转换方法是：自己随便由文法构造出语法树，然后按照语法树顺序画图。
 
-左线性:
-- $Sigma = cv_T$;(G的终结符号集为A的字母表)
-- $Q = cv_N,qh=S$;(G的开始符号为A的终结状态)
-- $q_0 = {S} in.not cv_N$;(额外增加开始状态)
-- $U ->W a => pas(W,a) = U$;
-- $U -> a => pas(S,a) = U$;
+#table(
+    columns: (auto, 1fr, 1fr),
+    align: (center, left, left),
+    stroke: 0.5pt + luma(70%),
+    inset: 6pt,
+    table.header([*项目*], [*右线性*], [*左线性*]),
+    [文法], [$A arrow.r a A | 0 B$ \ $B arrow.r b B | b$], [$A arrow.r A a | B 0$ \ $B arrow.r B b | b$],
+    [字母表], [$Sigma = cv_T$], [$Sigma = cv_T$ \ (G的终结符号集为A的字母表)],
+    [状态集], [$Q = cv_N$ \ (G的非终结符号作为A的状态)], [$Q = cv_N$ \ (G的非终结符号作为A的状态)],
+    [初态], [$q_0 = S$ \ (G的开始符号为A的开始状态)], [$q_0 = {S} in.not cv_N$ \ (额外增加开始状态)],
+    [终态], [$q_h = {Z} in.not cv_N$ \ (G的开始符号为A的终结状态)], [$q_h = S$ \ (额外增加终结状态)],
+    [转移],
+    [$U -> a W => pas(U, a) = W$ \ $U -> a => pas(U, a) = Z$],
+    [$U -> W a => pas(W, a) = U$ \ $U -> a => pas(S, a) = U$],
 
-右线性:
-- $Sigma = cv_T$;
-- $Q = cv_N,q_0=S$;(G的非终结符号作为A的状态，G的开始符号为A的开始状态)
-- $q_h = {Z} in.not cv_N$;(额外增加终结状态)
-- $U ->a W => pas(U,a) = W$; 
-- $U ->a => pas(U,a) = Z$;
+    [图示],
+    [#align(center, image("/assets/qq_pic_left.jpg", width: 65%))],
+    [#align(center, image("/assets/qq_pic_right.jpg", width: 65%))],
+)
 
 一定注意方向。
 反过来,给定$AA$也能得到$cg[S]$。
 
 
-== 正规表达式RE,FA 
+== 正规表达式RE,FA
 #definition[
-  我们称*正规表达式RE* $e in Sigma$,所有RE集合为#ce ;$e$描述的语言记作$L(e).
-  $
-  他满足:
+    我们称*正规表达式RE* $e in Sigma$,所有RE集合为#ce ;$e$描述的语言记作$L(e).$
+    他满足:
 
-- $epsilon,diameter in ce$;
-- $forall a in Sigma,a in ce$;
-- $e_1,e_2 in ce,$
-  - $(e_1) in ce$;(为了框定优先级)
-  - $e_1 e_2 in ce,L(e_1 e_2)=L(e_1)L(e_2) = {x y | x in L(e_1) and y in L(e_2)}$;
-  - $e_1|e_2 in ce ,L(e_1 | e_2) = L(e_1) union L(e_2)$;
-  - $e_1^star in ce , L(e_1^star) = (L(e_1))^star$.
+    - $epsilon,diameter in ce$;
+    - $forall a in Sigma,a in ce$;
+    - $e_1,e_2 in ce,$
+        - $(e_1) in ce$;(为了框定优先级)
+        - $e_1 e_2 in ce,L(e_1 e_2)=L(e_1)L(e_2) = {x y | x in L(e_1) and y in L(e_2)}$;
+        - $e_1|e_2 in ce ,L(e_1 | e_2) = L(e_1) union L(e_2)$;
+        - $e_1^star in ce , L(e_1^star) = (L(e_1))^star$.
 
-正规表达式就是正则表达式。// 为什么要用台湾译名。
+    正规表达式就是正则表达式。// 为什么要用台湾译名。
 ]
-RE具有一系列交换律、结合律等性质,如下图.#figure(image("/assets/image-10.png",width:70%))
+RE具有一系列交换律、结合律等性质：
+
+设$A$、$B$、$C$均为正规表达式，则有下列关系成立：
+
+#enum(
+    numbering: "(1)",
+    [$A | B = B | A$],
+    [$A | (B | C) = (A | B) | C$],
+    [$A (B C) = (A B) C$],
+    [$A (B | C) = A B | A C quad (B | C) A = B A | C A$],
+    [$epsilon A = A epsilon = A$],
+    [$(A^star)^star = A^star$],
+    [$A^star = epsilon | A A^star$],
+    [$(A B)^star A = A (B A)^star$],
+    [$(A | B)^star = (A^star B^star)^star = (A^star | B^star)^star$],
+    [$A = b | a A$ 当且仅当 $A = a^star b$],
+)
 
 当然,我们想研究的是RE$=>$FA的能力.
 === Thomposon's consturction
 接下来介绍如何通过RE构造FA。
 
-#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 #let node-style = (
-  shape: circle,
-  radius: 0.28cm,
-  fill: white,
-  stroke: 0.7pt,
+    shape: circle,
+    radius: 0.28cm,
+    fill: white,
+    stroke: 0.7pt,
 )
 
 #let edge-style = (
-  stroke: 0.7pt,
+    stroke: 0.7pt,
 )
 首先$Sigma in ce$，对于待求解的$e in ce$,构造
 #fletcher.diagram(
-  spacing: (1cm, 1cm),
-  node((0, 0), $S$, ..node-style),
-  node((1, 0), $Z$, ..node-style),
-  edge((0, 0), (1, 0), $e$, "->", ..edge-style),
+    spacing: (1cm, 1cm),
+    node((0, 0), $S$, ..node-style),
+    node((1, 0), $Z$, ..node-style),
+    edge((0, 0), (1, 0), $e$, "->", ..edge-style),
 )即可.然后*递归的*套用下面三条规则：
 
 
 // ② e1 e2
 #let fig2 = fletcher.diagram(
-  spacing: (1cm, 1cm),
-  node((0, 0), $A$, ..node-style),
-  node((1, 0), $B$, ..node-style),
-  node((2, 0), $C$, ..node-style),
-  edge((0, 0), (1, 0), $e_1$, "->", ..edge-style),
-  edge((1, 0), (2, 0), $e_2$, "->", ..edge-style),
+    spacing: (1cm, 1cm),
+    node((0, 0), $A$, ..node-style),
+    node((1, 0), $B$, ..node-style),
+    node((2, 0), $C$, ..node-style),
+    edge((0, 0), (1, 0), $e_1$, "->", ..edge-style),
+    edge((1, 0), (2, 0), $e_2$, "->", ..edge-style),
 )
 
 // ③ e1 | e2
 #let fig3 = fletcher.diagram(
-  spacing: (1cm, 1cm),
-  node((0, 0), $A$, ..node-style),
-  node((2, 0), $B$, ..node-style),
-  edge((0, 0), (2, 0), $e_1$, "->", bend: 30deg, ..edge-style),
-  edge((0, 0), (2, 0), $e_2$, "->", bend: -30deg, ..edge-style),
+    spacing: (1cm, 1cm),
+    node((0, 0), $A$, ..node-style),
+    node((2, 0), $B$, ..node-style),
+    edge((0, 0), (2, 0), $e_1$, "->", bend: 30deg, ..edge-style),
+    edge((0, 0), (2, 0), $e_2$, "->", bend: -30deg, ..edge-style),
 )
 
 // ④ e1*
 #let fig4 = fletcher.diagram(
-  spacing: (1cm, 2cm),
-  node((0, 0), $A$, ..node-style),
-  node((1, 0), $B$, ..node-style),
-  node((2, 0), $C$, ..node-style),
-  edge((0, 0), (1, 0), $epsilon$, "->", ..edge-style),
-  edge((1, 0), (1, 0), $e$, "->", loop-angle: 90deg, bend: 140deg, ..edge-style),
-  edge((1, 0), (2, 0), $epsilon$, "->", ..edge-style),
+    spacing: (1cm, 2cm),
+    node((0, 0), $A$, ..node-style),
+    node((1, 0), $B$, ..node-style),
+    node((2, 0), $C$, ..node-style),
+    edge((0, 0), (1, 0), $epsilon$, "->", ..edge-style),
+    edge((1, 0), (1, 0), $e$, "->", loop-angle: 90deg, bend: 140deg, ..edge-style),
+    edge((1, 0), (2, 0), $epsilon$, "->", ..edge-style),
 )
 
-#align(table(
-  columns: 3,
-  align: center + horizon,
-  stroke: 0.4pt,
-  inset: 8pt,
-  // 标题行
-  [*② 连接*], [*③ 选择*], [*④ 闭包*],
-  // 图行
-  [#fig2], [#fig3], [#fig4],
-  // 文字说明行
-  [$e_1 e_2$ 也是 $Sigma$ 上的 RE，], [$e_1 | e_2$ 也是 $Sigma$ 上的 RE，], [$e_1^*$ 也是 $Sigma$ 上的 RE，],
-  
-  [$L(e_1 e_2) = L(e_1)L(e_2)$], [$L(e_1 | e_2) = L(e_1) union L(e_2)$], [$L(e_1^*) = (L(e_1))^*$],
-),center)
+#align(
+    table(
+        columns: 3,
+        align: center + horizon,
+        stroke: 0.4pt,
+        inset: 8pt,
+        // 标题行
+        [*② 连接*], [*③ 选择*], [*④ 闭包*],
+        // 图行
+        [#fig2], [#fig3], [#fig4],
+        // 文字说明行
+        [$e_1 e_2$ 也是 $Sigma$ 上的 RE，], [$e_1 | e_2$ 也是 $Sigma$ 上的 RE，], [$e_1^*$ 也是 $Sigma$ 上的 RE，],
+
+        [$L(e_1 e_2) = L(e_1)L(e_2)$], [$L(e_1 | e_2) = L(e_1) union L(e_2)$], [$L(e_1^*) = (L(e_1))^*$],
+    ),
+    center,
+)
 
 
 #let node-style = (fill: rgb("#d0eeee"), stroke: 1pt + black, inset: 3pt)
 #let edge-style = (stroke: 1pt + black)
 
-//example就可以用fletcher而不是截图来解决了
 
 
 RE to FA:略
 
 
-== 正规文法,RG 
+== 正规文法,RG
 
 正规文法中，产生式的形式为右线性和左线性.
 
