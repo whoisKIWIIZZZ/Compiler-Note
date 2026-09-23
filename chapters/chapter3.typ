@@ -34,7 +34,7 @@
     )
 ]
 
-== 我去初音未来
+== FA
 === DFA(Deterministic Finite Automaton)，确定的有穷自动机
 #definition[
     所谓*确定的有穷自动机(,DFA)*,是:
@@ -210,6 +210,7 @@ $I_a$ 能确定 NFA 中状态子集间的映射，也就是即将构造的 DFA �
     [图示],
     [#align(center, image("/assets/qq_pic_left.jpg", width: 65%))],
     [#align(center, image("/assets/qq_pic_right.jpg", width: 65%))],
+    // 不是告诉你用flec那个包嘛
 )
 
 一定注意方向。
@@ -250,8 +251,7 @@ RE具有一系列交换律、结合律等性质：
 )
 
 当然,我们想研究的是RE$=>$FA的能力.
-=== Thomposon's consturction
-接下来介绍如何通过RE构造FA。
+=== Thomposon's consturction：如何通过RE构造FA
 
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 #let node-style = (
@@ -325,12 +325,14 @@ RE具有一系列交换律、结合律等性质：
 #let node-style = (fill: rgb("#d0eeee"), stroke: 1pt + black, inset: 3pt)
 #let edge-style = (stroke: 1pt + black)
 
+=== FA $==>$ RE
+逐个删除中间结点。
 
+所有原本“穿过”它的路径，现在都得绕过它，这就必然会产生新的边，故新边的标签必须融合原来的信息。
 
-RE to FA:略
+先从度数小的节点开始。
 
-
-== 正规文法,RG
+=== 正规文法,RG
 
 正规文法中，产生式的形式为右线性和左线性.
 
@@ -338,3 +340,36 @@ RG到RE:
 - $U ->alpha V,V -> beta ==> U = alpha beta$;
 - $U -> alpha U | beta ==> U = alpha^star beta$;
 - $U -> alpha | beta ==> U = alpha|beta$.
+// TODO
+
+
+== DFA的程序实现
+#figure(image("/assets/image-12.png",width:60%))
+- 查表：拿着拼好的 name 去符号表里查。如果是关键字（int, if），返回标记类型 1；如果是普通变量名，返回标记类型 2。
+- 回退指针：只有读了下一个单词的开始才能知道这个单词结束了。
+    - 比如读 `int a=10`;。为了确认 `a` 这个单词结束，机器必须再往下读一个字符 `=`。读到 `=` 发现不是字母数字，机器知道 `a` 结束了，但是 `=` 已经被读进来了。所以必须把指针退回去，把 `=` 留给下一轮循环去处理。
+== 词法分析程序
+
+单词形式：类别+属性值
+
+类别：保留字/关键字、标识符、常数、运算符、界限符
+
+单词的属性值：反映单词符号特征或特性的值，可以是指向符号表的指针
+
+一类一码：把单词按大类给个统一的编号。比如：所有变量（标识符）统一编号为 1，所有数字（常数）统一编号为 2。
+一符一码：每一个具体的符号，都发一个编号。比如：if 编号 3，then 编号 4，while 编号 6。
+
+=== 符号表
+简化语法分析器，通常把标识符当作终结符号 id 或 i;常量当作终结符号 num 或 d
+```cpp
+count = count +12;
+//count 就被分析成<id,"count">
+//12 => <num,12>
+```
+经过词法分析之后的词法单元序列会被加入到符号表. 
+
+我不想阅读符号表的定义作用生存期
+
+=== 词法分析程序的设计
++ 预处理：如删除注释、空格、回车换行符之类非必要信息。
+  - 缓冲区环
