@@ -155,7 +155,6 @@ Step1.如下图,这是从RE构造FA的状态转换图的过程:
   edge((0, 0), (2, 0), "->", label: $(a|b)^star a b b (a|b)^star$),
   )
   #let i = -1
-  #let n() = { i += 1; i }
 
   #diagram(
   node((0, 0), $S$, shape: circle, stroke: 1pt), 
@@ -367,5 +366,118 @@ $
 ]
 
 #solution([
-  
+  // #diagram(
+  // node((0, 0), $q_0$, shape: circle, stroke: 1pt),
+  // node((2, 0), $q_1$, shape: circle, stroke: 1pt),
+  //  edge((0, 0), (0, 0), "->", loop-angle: 90deg, bend: 130deg,label: $0$),
+  //   edge((0, 0), (2, 0), "->", loop-angle: 10deg, bend: 20deg,label: $1$), 
+  //   edge((2, 0), (0, 0), "->", loop-angle: 10deg, bend: 20deg,label: $0$),
+  // )
+
+  //  #diagram(
+  // node((0, 0), $q_0$, shape: circle, stroke: 1pt),
+  // node((2, 0), $q_1$, shape: circle, stroke: 1pt),
+  //  edge((0, 0), (0, 0), "->", loop-angle: 90deg, bend: 130deg,label: $0$),
+  //   edge((0, 0), (2, 0), "->", loop-angle: 10deg, bend: 20deg,label: $1$), 
+  //   edge((2, 0), (0, 0), "->", loop-angle: 10deg, bend: 20deg,label: $0$),
+  // )
+  // #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
+
+#diagram(
+  node-stroke: 0.8pt,
+  edge-stroke: 0.8pt,
+  spacing: 3em,
+
+  node((0, 0), [$A$], name: <A>),
+  node((1, 0), [$q_0$], name: <q0>),
+  node((2, 1), [$q_1$], name: <q1>),
+  node((3, 0), [$B$], name: <B>),
+
+  // 新起点
+  edge(<A>, <q0>, [$epsilon$], "->"),
+
+  // q0 自环
+  edge(
+    <q0>, <q0>,
+    [$0$],
+    "->",
+    bend: 130deg,
+  ),
+
+  // q0 -> q1
+  edge(
+    <q0>, <q1>,
+    [$1$],
+    "->",
+    bend: 15deg,
+  ),
+
+  // q1 -> q0
+  edge(
+    <q1>, <q0>,
+    [$0$],
+    "->",
+    bend: 15deg,
+  ),
+
+  // 原终态 -> 新终态
+  edge(
+    <q0>, <B>,
+    [$epsilon$],
+    "->",
+    bend: -25deg,
+  ),
+
+  edge(
+    <q1>, <B>,
+    [$epsilon$],
+    "->",
+  ),
+)
+
+  #diagram(
+  node-stroke: 0.8pt,
+  edge-stroke: 0.8pt,
+  spacing: 4em,
+
+  node((0, 0), [$A$], name: <A>),
+  node((1, 0), [$q_0$], name: <q0>),
+  node((2, 0), [$B$], name: <B>),
+
+  edge(
+    <A>, <q0>,
+    [$epsilon$],
+    "->",
+  ),
+
+  edge(
+    <q0>, <q0>,
+    [$0|10$],
+    "->",
+    bend: 130deg,
+  ),
+
+  edge(
+    <q0>, <B>,
+    [$epsilon|1$],
+    "->",
+  ),
+)
+
+#diagram(
+  node-stroke: 0.8pt,
+  edge-stroke: 0.8pt,
+  spacing: 6em,
+
+  node((0, 0), [$A$], name: <A>),
+  node((1, 0), [$B$], name: <B>),
+
+  edge(
+    <A>, <B>,
+    [$(0|10)^* (epsilon|1)$],
+    "->",
+  ),
+)
+
+所以正规表达式是$(0|10)^* (epsilon|1)$.
 ])
