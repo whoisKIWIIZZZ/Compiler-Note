@@ -1,8 +1,19 @@
 test.cpp
+
+# macOS junk
 .DS_Store
-__MACOSX/
 .AppleDouble
+.LSOverride
 ._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+__MACOSX/
+
+# build outputs
+*.pdf
+
+# 本地课程资料，不参与同步
 slides/
 resources/
-*.pdf
+hw/
