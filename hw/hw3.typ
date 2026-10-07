@@ -119,6 +119,7 @@ $
   node((0, 0), $S$, shape: circle, stroke: 1pt),
   node((1, 0), $A$, shape: circle, stroke: 1pt),
   node((2, 0), $B$, shape: circle, stroke: 1pt),
+  node((0, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
   // 用两个同心圆表示接受状态（双圈）
   
   edge((0, 0), (0, 0), "->", loop-angle: 90deg, bend: 130deg,label: $a$),
@@ -152,6 +153,7 @@ Step1.如下图,这是从RE构造FA的状态转换图的过程:
 #diagram(
   node((0, 0), $S$, shape: circle, stroke: 1pt),
   node((2, 0), $Z$, shape: circle, stroke: 1pt),
+   node((2, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
   edge((0, 0), (2, 0), "->", label: $(a|b)^star a b b (a|b)^star$),
   )
   #let i = -1
@@ -163,6 +165,7 @@ Step1.如下图,这是从RE构造FA的状态转换图的过程:
   node((3, 0), $C$, shape: circle, stroke: 1pt),
   node((4, 0), $D$, shape: circle, stroke: 1pt),
   node((5, 0), $Z$, shape: circle, stroke: 1pt),
+   node((5, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
   edge((0, 0), (1, 0), "->", label: $(a|b)^star$),
   edge((1, 0), (2, 0), "->", label: $a$),
   edge((2, 0), (3, 0), "->", label: $b$),
@@ -180,6 +183,7 @@ edge((4, 0), (5, 0), "->", label: $(a|b)^star$),
   node((4, 0), $D$, shape: circle, stroke: 1pt),
   node((5, 0), $E$, shape: circle, stroke: 1pt),
   node((6, 0), $Z$, shape: circle, stroke: 1pt),
+   node((6, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
   edge((0, 0), (0, 0), "->", loop-angle: 90deg, bend: 130deg,label: $a|b$),
   edge((-1, 0), (0, 0), "->", label: $epsilon$),
   edge((0, 0), (1, 0), "->", label: $epsilon$),
@@ -201,6 +205,7 @@ edge((5, 0), (5, 0), "->",loop-angle: 90deg, bend: 130deg, label: $a|b$),
   node((4, 0), $D$, shape: circle, stroke: 1pt),
   node((5, 0), $E$, shape: circle, stroke: 1pt),
   node((6, 0), $Z$, shape: circle, stroke: 1pt),
+   node((6, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
   edge((0, 0), (0, 0), "->", loop-angle: 90deg, bend: 130deg,label: $a$),
   edge((0, 0), (0, 0), "->", loop-angle: -90deg, bend: 130deg,label: $b$),
   edge((-1, 0), (0, 0), "->", label: $epsilon$),
@@ -353,7 +358,27 @@ pas(q, alpha) = cases(
   diameter","quad &"else"
 )
 $
+ #diagram(
+  node((0, 0), $q_0$, shape: circle, stroke: 1pt), 
+  node((1, 0), $q_1$, shape: circle, stroke: 1pt),
+  node((2, 0), $q_3$, shape: circle, stroke: 1pt),
+  node((3, 0), $q_4$, shape: circle, stroke: 1pt),
 
+  
+   node((3, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
+  edge((1, 0), (1, 0), "->", loop-angle: 90deg, bend: 130deg,label: $a$),
+  // edge((1, 0), (1, 0), "->", loop-angle: -90deg, bend: 130deg,label: $b$),
+
+  edge((0, 0), (1, 0), "->", label: $a$),
+  edge((1, 0), (2, 0), "->",bend: 30deg, label: $b$),
+  edge((2, 0), (1, 0), "->",bend: 30deg, label: $a$),
+  edge((2, 0), (3, 0), "->", label: $b$),
+    edge((3, 0), (3, 0), "->", loop-angle: 90deg, bend: 130deg,label: $a$),
+  edge((3, 0), (3, 0), "->", loop-angle: -90deg, bend: 130deg,label: $b$),
+
+
+
+  )
 
 ]
 
@@ -392,6 +417,7 @@ $
   node((1, 0), [$q_0$], name: <q0>),
   node((2, 1), [$q_1$], name: <q1>),
   node((3, 0), [$B$], name: <B>),
+   node((3, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
 
   // 新起点
   edge(<A>, <q0>, [$epsilon$], "->"),
@@ -443,6 +469,7 @@ $
   node((0, 0), [$A$], name: <A>),
   node((1, 0), [$q_0$], name: <q0>),
   node((2, 0), [$B$], name: <B>),
+   node((2, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
 
   edge(
     <A>, <q0>,
@@ -471,6 +498,7 @@ $
 
   node((0, 0), [$A$], name: <A>),
   node((1, 0), [$B$], name: <B>),
+   node((1, 0), $$, radius:9.4pt,shape: circle, stroke: 0.6pt),
 
   edge(
     <A>, <B>,
