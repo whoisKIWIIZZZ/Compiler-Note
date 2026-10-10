@@ -30,8 +30,10 @@
 - 程序翻译,从$S$出发,推导出句子$L$.
 
 == 左递归及其消除
-如果遇到$U -> U y , U =>^star U y$情形,左递归带来无限循环#note[
-    注意推导是最左推导,所以我们只需要消除*左*递归.
+如果遇到$U -> U y , U =>^star U y$情形,左递归带来无限循环。所以我们要让非终结符待在产物的最左边。
+
+#note[
+    我们一般用最左推导，所以我们只需要消除*左*递归.
 ].
 
 #proposition([
@@ -41,38 +43,71 @@
         & A' -> alpha_i A'|epsilon
     $
 
-
     - 间接递归：
     ```cpp
     for i = 1 to n:
-      for j = 1 to i-1:
-          若存在产生式 Ai -> Aj γ and Aj -> δ1 | δ2 | ... | δk
-          则把 Ai -> Aj γ 替换为：
-          Ai -> δ1 γ | δ2 γ | ... | δk γ
-
-      消除 Ai 的直接左递归（通过把排在前面的产生式代入后面的）
+    	for j = 1 to i-1:
+    		if 存在产生式 Ai -> Aj γ && Aj -> δ1 | δ2 | ... | δk
+    			把 Ai -> Aj γ 替换为：Ai -> δ1 γ | δ2 γ | ... | δk γ  # 把排在前面的已经处理过的产生式代入后面的
+    		end if
+    	end for
+    	消除 Ai 的直接左递归
+    end for
     ```
 ])
+// 任何人都不准动上面这个代码块的缩进，谁敢动我就跟他爆了。——xhkz
 #example[
-    `U -> `
+    #figure(image("/assets/image-15.png", width: 70%))
 ]
 
 == 回溯及其消除
-如果存在$U -> alpha_i , i in {1,2,3,dots,n}, alpha_1,alpha_2,dots,alpha_n$有相同的终结首符号,那么文法分析是不知道选择哪一个$alpha_i$的.不妨$f_i (alpha):Sigma^star -> cv_T$表示$alpha$的第$i$个字符.
+如果存在$U -> alpha_i , i in {1,2,3,dots,n}, alpha_1,alpha_2,dots,alpha_n$有相同的终结首符号，那么文法分析不知道选择哪一个产生式。
+
+// 不妨$f_i (alpha):Sigma^star -> cv_T$表示$alpha$的第$i$个字符.
+
+#definition[
+    设文法 $G = (V_N, V_T, P, S)$，$alpha, beta in (V_N union V_T)^*$，$A in V_N$。$dollar$ 是输入结束符。
+
+    #note[$fff(alpha)$ 是 $alpha$ 能推导出的所有串的首终结符集合；若 $alpha$ 能推导出空串，则 $epsilon in fff(alpha)$。]
+    $
+        fff(alpha) = { a | alpha =>^* a beta, a in V_T } union { epsilon | alpha =>^* epsilon }
+    $
+
+    #note[$fo(A)$ 是可能紧跟在 $A$ 后面的终结符集合；若 $A$ 可以出现在某个句型的最右端，则结束符也属于 $fo(A)$。]
+    $
+        fo(A) = { a | S =>^* alpha A a beta, a in V_T } union { dollar | S =>^* alpha A }
+    $
+]
 
 #proposition([
-    避免回溯的条件:$U -> alpha_i , i in {1,2,3,dots,n}$满足:
-    - $fff(alpha_i) eq.delta {a|alpha_i =>^star a dots and a in cv_T}$,且$fff(alpha_i)$两两不相交.当然$epsilon in fff(alpha_i) "iff" alpha_i =>^star epsilon$;
-    - $fo(U) eq.delta{a|S =>^star dots U a dots,a in cv_T}$,且$a_j =>^star epsilon ==> fff(alpha_j) ∩ fo(U) = diameter$.
+    任一形如 $U -> alpha_1 | alpha_2 | dots | alpha_n$ 的产生式满足：
+
+    + $alpha_1, alpha_2, dots, alpha_n$ 的终结首符号集两两不相交，即
+        $ op("FIRST")(alpha_i) inter op("FIRST")(alpha_j) = emptyset quad (i != j) $
+
+    + 如果 $exists alpha_j arrow.r.double^* epsilon$ 时，文法还需要同时满足
+        $ op("FIRST")(alpha_i) inter op("FOLLOW")(U) = emptyset $
+        #example[
+            需要上述规则，是因为：
+            #figure(
+                image("/assets/image-14.png", width: 60%),
+                caption: [
+                    $A'$和$S$产生的$B$(且同时$A'$变成空串)都可以使接下来匹配$a$。不知道这个$a$是$A'$生成的,还是后续$S$产生的$B$生成的.
+                ],
+            )
+        ]
 ])
-// 需要加上人话解读
-容易看出第二个条件是为什么而构造.
-#figure(
-    image("/assets/image-14.png"),
-    caption: [
-        不知道这个a是$A'$生成的,还是后续S->B生成的.
-    ],
-)
+
+
+
+$fo$的求法：
+$ op("FOLLOW")(U) = { a | S arrow.r.double^* ... U a ... , a in V_T } $
+
++ 对于文法的开始/识别符号 S，令 \$ in op("FOLLOW")(S);
++ $A -> alpha B beta$，则 $op("FIRST")(beta)$ 中的非 $epsilon$ 元素 属于 $op("FOLLOW")(B)$;
++ $A -> alpha B$，或$A -> alpha B beta$ 而$op("FIRST")(beta)$含有 $epsilon$，则$op("FOLLOW")(A)$ 的元素属于 $op("FOLLOW")(B)$。
+
+结合语法树理解。
 == LL(1)文法
 #definition[
     从左到右扫描输入串,从开始符号生成最左推导时，对于每一个产生式$U -> alpha_1|alpha_2....|alpha_i...|alpha_n, i in {1,2,dots,n}$,如果查看U所产生的非终结符号串的第一个非终结符，就能唯一确定当前应该选择的产生式，那么我们称这种文法是LL(1)文法.
