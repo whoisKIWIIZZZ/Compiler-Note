@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LR 分析 · i + i * i</title>
+<style>
+  :root{
+    --ink:#1b2237;
+    --muted:#7b839a;
+    --line:#dfe4ee;
+    --blue:#2f5fd0;
+    --blue-bg:#eef2fd;
+    --green:#0d8a68;
+    --red:#c53f3f;
+    --red-bg:#fdeeee;
+    --violet:#7a4bc4;
+    --violet-bg:#f3edfd;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:30px 30px 56px;background:#f7f8fb;color:var(--ink);
+    font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  h1{font-size:24px;margin:0 0 10px;font-weight:650}
+  .grammar{font-family:var(--mono);font-size:16px;color:#3c4560;margin:0 0 20px}
+  .grammar b{color:var(--blue);font-weight:700;margin-right:3px}
+  .grammar .gap{display:inline-block;width:26px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+  .card + .card{margin-top:18px}
+  .cap{font-size:13px;color:var(--muted);letter-spacing:.03em;margin:0 0 10px}
+  .cap .note{color:#aeb5c4;float:right}
+
+  /* ---------- 当前输入 ---------- */
+  .input{font-family:var(--mono);font-size:30px;letter-spacing:.08em;padding:2px 0 16px}
+  .input .done{color:#c6ccd8}
+  .input .cur{color:var(--blue);border-bottom:3px solid var(--blue)}
+  .input .rest{color:#5a6379}
+
+  /* ---------- 分析栈（横向） ---------- */
+  .stackblock{display:flex;align-items:flex-end;gap:16px}
+  .stacklabels{display:flex;flex-direction:column;justify-content:flex-end;gap:2px;flex:0 0 auto;padding-bottom:14px}
+  .stacklabels div{font-size:12.5px;color:var(--muted);text-align:right;height:34px;display:flex;align-items:center;justify-content:flex-end}
+  .stacklabels div + div{height:44px}
+  .stackline{display:flex;align-items:flex-end;flex:1;min-height:86px;overflow-x:auto;padding-bottom:8px}
+  .col{
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+    min-width:54px;padding:0 3px 4px;margin-right:2px;border-radius:9px;
+    transition:background .2s ease;
+  }
+  .col .st{
+    width:34px;height:34px;border-radius:17px;border:2px solid #d5dceb;background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:17px;color:#4a5470;transition:all .2s ease;
+  }
+  .col .sy{
+    font-family:var(--mono);font-size:30px;font-weight:600;color:var(--blue);
+    height:44px;display:flex;align-items:center;justify-content:center;
+  }
+  .col .sy.empty{color:#d6dce8;font-size:20px}
+  .col.top{background:#f6f8fe}
+  .col.top .st{background:var(--blue);border-color:var(--blue);color:#fff}
+  .col.mark{background:var(--red-bg)}
+  .col.mark .st{background:#fff;border-color:var(--red);color:var(--red);text-decoration:line-through;text-decoration-thickness:2px}
+  .col.mark .sy{color:var(--red);text-decoration:line-through;text-decoration-thickness:3px}
+  .col.fresh .st,.col.fresh .sy{animation:rise .4s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+  /* ---------- 说明 ---------- */
+  .action{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
+  .kind{font-size:12.5px;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+  .formula{font-family:var(--mono);font-size:21px;color:#2a3350}
+  .formula .k{color:var(--blue)}
+  .formula .g{color:var(--violet)}
+  .formula .e{color:var(--red)}
+  .say{font-size:15px;color:#4c556e;margin-top:7px;min-height:44px}
+  .say b{color:#1b2237}
+
+  /* ---------- 控制 ---------- */
+  .controls{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  button{
+    font:inherit;font-size:15px;color:#333c55;background:#fff;border:1px solid #d3dae7;
+    border-radius:8px;padding:9px 18px;cursor:pointer;
+  }
+  button:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+  button:disabled{opacity:.35;cursor:default}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  button.primary:hover:not(:disabled){background:#2850b4;color:#fff}
+  .spacer{flex:1}
+  .step{font-family:var(--mono);font-size:14px;color:var(--muted)}
+
+  /* ---------- LR 表 ---------- */
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:17px;table-layout:fixed}
+  th,td{height:42px;text-align:center;padding:0;font-weight:400}
+  thead th{color:#6b7389;font-size:15px;border-bottom:1px solid var(--line);height:34px}
+  thead th.grp{font-family:var(--sans);letter-spacing:.16em;font-size:12.5px;color:#9aa2b4;height:32px}
+  thead th.corner{font-family:var(--sans);letter-spacing:.05em;font-size:13px;color:#8b93a7}
+  tbody th{color:#59617a;border-right:1px solid #f0f2f7;font-size:16px}
+  tbody td{color:#333b52;border-bottom:1px solid #f4f5f9;transition:background .18s ease}
+  td.blank{color:transparent}
+  td.r{color:var(--red)}
+  td.s{color:var(--green)}
+  td.acc{color:var(--blue);font-size:14px}
+  td.goto{color:var(--violet)}
+  td sub{font-size:11px}
+  th.row-on,th.col-on{background:var(--blue-bg);color:var(--blue)}
+  td.on{background:var(--blue-bg);color:var(--blue);box-shadow:inset 0 0 0 2px var(--blue);border-radius:6px}
+  td.on.err{background:var(--red-bg);color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
+  td.on.goto{background:var(--violet-bg);color:var(--violet);box-shadow:inset 0 0 0 2px var(--violet)}
+  .tblnote{font-family:var(--sans);font-size:13px;color:var(--muted);margin:12px 0 0}
+  .tblnote .m{font-family:var(--mono);color:#4c556e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>用 LR 分析表分析 i + i * i</h1>
+  <p class="grammar">
+    <b>1</b>E → E+T<span class="gap"></span>
+    <b>2</b>E → T<span class="gap"></span>
+    <b>3</b>T → T*F<span class="gap"></span>
+    <b>4</b>T → F<span class="gap"></span>
+    <b>5</b>F → (E)<span class="gap"></span>
+    <b>6</b>F → i
+  </p>
+
+  <!-- ============ 舞台 ============ -->
+  <section class="card">
+    <div class="cap">当前输入<span class="note">下划线 = 当前输入 a</span></div>
+    <div class="input" id="input"></div>
+
+    <div class="cap">分析栈<span class="note">左边是栈底，右边是栈顶</span></div>
+    <div class="stackblock">
+      <div class="stacklabels"><div>状态</div><div>符号</div></div>
+      <div class="stackline" id="stackLine"></div>
+    </div>
+
+    <div class="action">
+      <div class="kind" id="kind"></div>
+      <div class="formula" id="formula"></div>
+      <div class="say" id="say"></div>
+    </div>
+
+    <div class="controls">
+      <button id="btnReset">⏮ 重置</button>
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext" class="primary">下一步 ▶</button>
+      <span class="spacer"></span>
+      <span class="step" id="step"></span>
+    </div>
+  </section>
+
+  <!-- ============ 分析表 ============ -->
+  <section class="card">
+    <div class="cap">LR 分析表<span class="note">高亮 = 这一步看的格子</span></div>
+    <table id="table"></table>
+    <p class="tblnote">
+      <span class="m">S<sub>j</sub></span> 移进并转到状态 j　·
+      <span class="m">r<sub>j</sub></span> 按第 j 条产生式归约　·
+      <span class="m">acc</span> 接受　·
+      GOTO 里的数字 = 归约后转到的状态
+    </p>
+  </section>
+
+</div>
+
+<script>
+/* ================= 数据 ================= */
+const INPUT = 'i+i*i'.split('').concat(['$']);
+const ACT_COLS = ['i','+','*','(',')','$'];
+const GOTO_COLS = ['E','T','F'];
+const ACTION = {
+  0:{'i':'s5','(':'s4'},
+  1:{'+':'s6','$':'acc'},
+  2:{'+':'r2','*':'s7',')':'r2','$':'r2'},
+  3:{'+':'r4','*':'r4',')':'r4','$':'r4'},
+  4:{'i':'s5','(':'s4'},
+  5:{'+':'r6','*':'r6',')':'r6','$':'r6'},
+  6:{'i':'s5','(':'s4'},
+  7:{'i':'s5','(':'s4'},
+  8:{'+':'s6',')':'s11'},
+  9:{'+':'r1','*':'s7',')':'r1','$':'r1'},
+  10:{'+':'r3','*':'r3',')':'r3','$':'r3'},
+  11:{'+':'r5','*':'r5',')':'r5','$':'r5'}
+};
+const GOTO = {0:{E:1,T:2,F:3}, 4:{E:8,T:2,F:3}, 6:{T:9,F:3}, 7:{F:10}};
+const PRODS = {
+  1:{lhs:'E',rhs:['E','+','T']},
+  2:{lhs:'E',rhs:['T']},
+  3:{lhs:'T',rhs:['T','*','F']},
+  4:{lhs:'T',rhs:['F']},
+  5:{lhs:'F',rhs:['(','E',')']},
+  6:{lhs:'F',rhs:['i']}
+};
+const prodText = id => PRODS[id].lhs + ' → ' + PRODS[id].rhs.join(' ');
+
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sub = v => v.replace(/^([sr])(\d+)$/, '$1<sub>$2</sub>');
+
+/* ================= 建表 ================= */
+(function(){
+  let h = '<thead><tr><th class="corner" rowspan="2">状态</th>' +
+          '<th class="grp" colspan="6">ACTION</th>' +
+          '<th class="grp" colspan="3">GOTO</th></tr><tr>';
+  ACT_COLS.forEach(c => h += `<th data-col="${esc(c)}">${esc(c)}</th>`);
+  GOTO_COLS.forEach(c => h += `<th data-col="${c}">${c}</th>`);
+  h += '</tr></thead><tbody>';
+  for(let q = 0; q < 12; q++){
+    h += `<tr><th data-row="${q}">${q}</th>`;
+    ACT_COLS.forEach(c => {
+      const v = (ACTION[q]||{})[c];
+      const cls = !v ? 'blank' : v[0]==='s' ? 's' : v[0]==='r' ? 'r' : 'acc';
+      h += `<td class="${cls}" data-q="${q}" data-col="${esc(c)}">${v ? sub(v) : ''}</td>`;
+    });
+    GOTO_COLS.forEach(c => {
+      const v = (GOTO[q]||{})[c];
+      h += `<td class="goto${v===undefined?' blank':''}" data-q="${q}" data-col="${c}">${v===undefined?'':v}</td>`;
+    });
+    h += '</tr>';
+  }
+  $('#table').innerHTML = h + '</tbody>';
+})();
+
+/* ================= 把分析过程拆成最小步骤 =================
+   一次「下一步」只做一件事：查 ACTION / 移进 / 找句柄 / 弹出 / 查 GOTO / 压回
+   ========================================================= */
+const snap = st => st.map(e => ({...e}));
+const steps = [];
+
+(function build(){
+  let stack = [{sym:null, q:0}], ptr = 0, guard = 0;
+  const push = o => steps.push(o);
+
+  while(guard++ < 200){
+    const q = stack[stack.length-1].q, a = INPUT[ptr];
+    const act = (ACTION[q]||{})[a];
+
+    /* ① 查 ACTION */
+    push({
+      stack: snap(stack), ptr, hl: {q, col: a, mode: act ? '' : 'err'},
+      kind: '查 ACTION 表',
+      formula: `ACTION[<span class="k">${q}</span>, ${esc(a)}] = ${act ? `<span class="k">${esc(act)}</span>` : '<span class="e">空白</span>'}`,
+      say: act
+        ? `栈顶状态 <b>${q}</b>，当前输入 <b>${esc(a)}</b>，交叉的那一格（见下方表）就是本次要做的动作。`
+        : `这一格是空的：状态 ${q} 面对输入 ${esc(a)} 没有任何动作，分析到此结束。`
+    });
+    if(!act) break;
+
+    if(act[0] === 's'){
+      const j = +act.slice(1);
+      stack = stack.concat([{sym:a, q:j}]); ptr++;
+      push({
+        stack: snap(stack), ptr, fresh: true,
+        kind: '移进 shift',
+        formula: `压入 <span class="k">${esc(a)}</span>，状态 <span class="k">${j}</span>`,
+        say: `符号栈加 <b>${esc(a)}</b>，状态栈加 <b>${j}</b>，输入指针右移一位。`
+      });
+      continue;
+    }
+
+    if(act[0] === 'r'){
+      const pid = +act.slice(1), p = PRODS[pid], m = p.rhs.length;
+      const base = stack[stack.length-m-1];
+      const target = (GOTO[base.q]||{})[p.lhs];
+      const popped = stack.slice(0, stack.length-m);
+
+      /* ② 标出句柄 */
+      push({
+        stack: snap(stack), ptr, mark: m, hl: {q, col: a, mode: ''},
+        kind: `归约 r${pid} · ① 找句柄`,
+        formula: `${esc(prodText(pid))}，右部 ${m} 个符号`,
+        say: `r${pid} 要求把栈顶这 <b>${m}</b> 组（红色划掉的部分）换成一个 <b>${esc(p.lhs)}</b>。`
+      });
+
+      /* ③ 弹出 */
+      push({
+        stack: snap(popped), ptr,
+        kind: `归约 r${pid} · ② 弹出`,
+        formula: `两个栈各弹出 ${m} 组，露出状态 <span class="k">${base.q}</span>`,
+        say: `弹出后栈顶状态回到 <b>${base.q}</b>。归约不动输入指针。`
+      });
+
+      /* ④ 查 GOTO */
+      push({
+        stack: snap(popped), ptr, hl: {q: base.q, col: p.lhs, mode: 'goto'},
+        kind: '查 GOTO 表',
+        formula: `GOTO[<span class="k">${base.q}</span>, <span class="g">${esc(p.lhs)}</span>] = <span class="g">${target}</span>`,
+        say: `归约出的 <b>${esc(p.lhs)}</b> 该接到哪个状态：行看弹出的栈顶状态 <b>${base.q}</b>，列看 <b>${esc(p.lhs)}</b>。`
+      });
+
+      /* ⑤ 压回 */
+      stack = popped.concat([{sym:p.lhs, q:target}]);
+      push({
+        stack: snap(stack), ptr, fresh: true,
+        kind: `归约 r${pid} · ③ 压回`,
+        formula: `压入 <span class="g">${esc(p.lhs)}</span>，状态 <span class="g">${target}</span>`,
+        say: `左部和 GOTO 查到的状态一起压栈。剩余输入没有变 —— 这就是归约和移进的区别。`
+      });
+      continue;
+    }
+
+    /* acc：查表那一步就是终局 */
+    steps[steps.length-1].kind = '接受 accept';
+    steps[steps.length-1].say =
+      `这一格是 <b>acc</b>：栈里只剩起始状态和 <b>E</b>，输入也读完了，分析成功 —— i+i*i 是这个文法的句子。`;
+    break;
+  }
+})();
+
+/* ================= 渲染 ================= */
+let idx = 0;
+const TOTAL = steps.length;
+
+function render(){
+  const st = steps[idx];
+
+  /* 输入串 */
+  const done = INPUT.slice(0, st.ptr).join('');
+  const cur  = st.ptr < INPUT.length ? INPUT[st.ptr] : '';
+  const rest = INPUT.slice(st.ptr+1).join('');
+  $('#input').innerHTML =
+    `<span class="done">${esc(done)}</span><span class="cur">${esc(cur)}</span><span class="rest">${esc(rest)}</span>`;
+
+  /* 两个栈：横向，左栈底右栈顶 */
+  let line = '';
+  st.stack.forEach((e, i) => {
+    const isTop = i === st.stack.length - 1;
+    const marked = st.mark && i >= st.stack.length - st.mark;
+    const cls = ['col', isTop ? 'top' : '', marked ? 'mark' : '', (st.fresh && isTop) ? 'fresh' : '']
+      .filter(Boolean).join(' ');
+    line += `<div class="${cls}">` +
+            `<div class="st">${e.q}</div>` +
+            `<div class="sy${e.sym === null ? ' empty' : ''}">${e.sym === null ? '' : esc(e.sym)}</div>` +
+            `</div>`;
+  });
+  $('#stackLine').innerHTML = line;
+
+  /* 说明 */
+  $('#kind').textContent = st.kind;
+  $('#formula').innerHTML = st.formula;
+  $('#say').innerHTML = st.say;
+
+  /* 表高亮 */
+  document.querySelectorAll('.on,.row-on,.col-on').forEach(e => e.classList.remove('on','row-on','col-on','err','goto'));
+  if(st.hl){
+    const td = document.querySelector(`td[data-q="${st.hl.q}"][data-col="${CSS.escape(st.hl.col)}"]`);
+    if(td){ td.classList.add('on'); if(st.hl.mode) td.classList.add(st.hl.mode); }
+    const rh = document.querySelector(`th[data-row="${st.hl.q}"]`);
+    const ch = document.querySelector(`th[data-col="${CSS.escape(st.hl.col)}"]`);
+    if(rh) rh.classList.add('row-on');
+    if(ch) ch.classList.add('col-on');
+  }
+
+  $('#step').textContent = `${idx} / ${TOTAL}`;
+  $('#btnPrev').disabled = idx === 0;
+  $('#btnNext').disabled = idx === TOTAL - 1;
+  $('#btnReset').disabled = idx === 0;
+}
+
+$('#btnNext').onclick = () => { if(idx < TOTAL-1){ idx++; render(); } };
+$('#btnPrev').onclick = () => { if(idx > 0){ idx--; render(); } };
+$('#btnReset').onclick = () => { idx = 0; render(); };
+
+render();
+
+/* 调试：index.html#s=12 */
+const m = location.hash.match(/s=(\d+)/);
+if(m){ idx = Math.min(+m[1], TOTAL-1); render(); }
+</script>
+</body>
+</html>
