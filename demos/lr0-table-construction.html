@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LR(0) 分析表构造 · 表达式文法</title>
+<style>
+  :root{
+    --ink:#1b2237;
+    --muted:#7b839a;
+    --line:#dfe4ee;
+    --blue:#2f5fd0;
+    --blue-bg:#eef2fd;
+    --green:#0d8a68;
+    --green-bg:#eaf6f1;
+    --red:#c53f3f;
+    --red-bg:#fdeeee;
+    --violet:#7a4bc4;
+    --violet-bg:#f3edfd;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:30px 30px 56px;background:#f7f8fb;color:var(--ink);
+    font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  h1{font-size:24px;margin:0 0 10px;font-weight:650}
+  .grammar{font-family:var(--mono);font-size:16px;color:#3c4560;margin:0 0 20px}
+  .grammar b{color:var(--blue);font-weight:700;margin-right:3px}
+  .grammar .gap{display:inline-block;width:22px}
+  .grammar i{font-family:var(--sans);font-style:normal;color:#9aa2b4;font-size:13px;margin-right:4px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+  .card + .card{margin-top:18px}
+  .cap{font-size:13px;color:var(--muted);letter-spacing:.03em;margin:0 0 10px}
+  .cap .note{color:#aeb5c4;float:right;margin-left:12px}
+
+  /* ---------- 状态条 ---------- */
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 16px}
+  .chip{
+    width:46px;height:38px;flex:0 0 auto;border-radius:9px;
+    font-family:var(--mono);font-size:16px;
+    display:flex;align-items:center;justify-content:center;
+    border:2px solid #e2e7f2;background:#fbfcfe;color:#6b7389;
+  }
+  .chip.ghost{opacity:.22;border-style:dashed}
+  .chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+  .chip.warn{border-color:var(--red);background:var(--red-bg);color:var(--red);font-weight:600}
+  .chip.mergeflash{animation:merge .55s ease}
+  @keyframes merge{0%{background:var(--violet);border-color:var(--violet);color:#fff}100%{}}
+
+  /* ---------- 项目集面板 ---------- */
+  .panel{display:flex;gap:20px;align-items:stretch;min-height:280px}
+  .items{flex:1.15;min-width:0}
+  .item{
+    display:flex;align-items:center;gap:10px;margin:4px 0;padding:5px 12px;
+    font-family:var(--mono);font-size:20px;color:#33415e;
+    background:#fbfcff;border-radius:6px;border-left:4px solid #d9dfee;
+  }
+  .item.kernel{border-left-style:solid;border-left-color:#9fb2d8}
+  .item.derived{border-left-style:dashed;border-left-color:#c3cde4}
+  .item .tag{margin-left:auto;font-size:12.5px;color:#b7bfd3;font-family:var(--sans)}
+  .item.par{background:var(--blue-bg);border-left-color:var(--blue)}
+  .item.mov{background:var(--blue-bg);border-left-color:var(--blue)}
+  .item.added{background:var(--green-bg);border-left-color:var(--green)}
+  .item.bad{background:var(--red-bg);border-left-color:var(--red);color:var(--red)}
+  .d{color:var(--blue);font-weight:700;font-size:1.15em}
+  .item.bad .d{color:var(--red)}
+
+  /* ---------- 转移预览框 ---------- */
+  .kbox{flex:1;min-width:0;border:1.5px dashed #c5cfe3;background:#fbfcff;border-radius:10px;padding:14px 16px}
+  .cap2{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+  .ki{font-family:var(--mono);font-size:20px;color:#33415e;margin:4px 0}
+  .kres{margin-top:12px;padding-top:10px;border-top:1px dashed #dbe1ee;font-family:var(--mono);font-size:18px}
+  .kres.new{color:var(--green)}
+  .kres.merge{color:var(--violet)}
+
+  /* ---------- 说明 ---------- */
+  .action{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
+  .kind{font-size:12.5px;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+  .formula{font-family:var(--mono);font-size:21px;color:#2a3350}
+  .formula .k{color:var(--blue)}
+  .formula .g{color:var(--violet)}
+  .formula .e{color:var(--red)}
+  .formula .s{color:var(--green)}
+  .formula .n{color:var(--blue)}
+  .say{font-size:15px;color:#4c556e;margin-top:7px;min-height:44px}
+  .say b{color:#1b2237}
+
+  /* ---------- 控制 ---------- */
+  .controls{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  button{
+    font:inherit;font-size:15px;color:#333c55;background:#fff;border:1px solid #d3dae7;
+    border-radius:8px;padding:9px 18px;cursor:pointer;
+  }
+  button:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+  button:disabled{opacity:.35;cursor:default}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  button.primary:hover:not(:disabled){background:#2850b4;color:#fff}
+  .spacer{flex:1}
+  .step{font-family:var(--mono);font-size:14px;color:var(--muted)}
+
+  /* ---------- LR(0) 表 ---------- */
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:17px;table-layout:fixed}
+  th,td{height:42px;text-align:center;padding:0;font-weight:400}
+  thead th{color:#6b7389;font-size:15px;border-bottom:1px solid var(--line);height:34px}
+  thead th.grp{font-family:var(--sans);letter-spacing:.16em;font-size:12.5px;color:#9aa2b4;height:32px}
+  thead th.corner{font-family:var(--sans);letter-spacing:.05em;font-size:13px;color:#8b93a7}
+  tbody th{color:#59617a;border-right:1px solid #f0f2f7;font-size:16px}
+  tbody td{color:#333b52;border-bottom:1px solid #f4f5f9}
+  td.s{color:var(--green)}
+  td.r{color:var(--red)}
+  td.acc{color:var(--blue);font-size:14px}
+  td.g{color:var(--violet)}
+  td.conf{color:var(--red);font-weight:600}
+  td sub,th sub{font-size:11px}
+  th.row-on{background:var(--blue-bg);color:var(--blue)}
+  th.col-on{background:var(--blue-bg);color:var(--blue)}
+  td.on{background:var(--blue-bg);color:var(--blue);box-shadow:inset 0 0 0 2px var(--blue);border-radius:6px}
+  td.on.conf{color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
+  td.jflash{animation:wflash .55s ease}
+  @keyframes wflash{0%{background:#f4e7a8}100%{}}
+  .tblnote{font-family:var(--sans);font-size:13px;color:var(--muted);margin:12px 0 0}
+  .tblnote .m{font-family:var(--mono);color:#4c556e}
+  #slrline{background:var(--blue-bg);border-radius:6px;padding:8px 12px;color:#4c556e}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>构造 LR(0) 分析表：项目集 → DFA → ACTION / GOTO</h1>
+  <p class="grammar">
+    <i>拓广</i><b>0</b>S' → E<span class="gap"></span>
+    <b>1</b>E → E+T<span class="gap"></span>
+    <b>2</b>E → T<span class="gap"></span>
+    <b>3</b>T → T*F<span class="gap"></span>
+    <b>4</b>T → F<span class="gap"></span>
+    <b>5</b>F → (E)<span class="gap"></span>
+    <b>6</b>F → i
+  </p>
+
+  <!-- ============ 舞台 ============ -->
+  <section class="card">
+    <div class="cap" id="zonecap">阶段一 · 从项目集造 DFA<span class="note" id="zonenote"></span></div>
+    <div class="chips" id="chips"></div>
+
+    <div class="panel">
+      <div class="items" id="items"></div>
+      <div class="kbox" id="kbox">
+        <div class="cap2" id="kcap"></div>
+        <div id="kbody"></div>
+        <div class="kres" id="kres"></div>
+      </div>
+    </div>
+
+    <div class="action">
+      <div class="kind" id="kind"></div>
+      <div class="formula" id="formula"></div>
+      <div class="say" id="say"></div>
+    </div>
+
+    <div class="controls">
+      <button id="btnReset">⏮ 重置</button>
+      <button id="btnPrev">◀ 上一步</button>
+      <button id="btnNext" class="primary">下一步 ▶</button>
+      <span class="spacer"></span>
+      <span class="step" id="stepno"></span>
+    </div>
+  </section>
+
+  <!-- ============ 分析表 ============ -->
+  <section class="card">
+    <div class="cap">LR(0) 分析表<span class="note">高亮 = 这一步刚写的格子 · 红框 = 移进-归约冲突</span></div>
+    <table id="table"></table>
+    <p class="tblnote" id="slrline" hidden>
+      这张表注定失败：<span class="m">I2、I9</span> 的 <span class="m">*</span> 格同时写着 r 和 s。
+      SLR(1) 的修补：只在 <span class="m">a ∈ FOLLOW(U)</span> 时才填 r。FOLLOW(E) = { +, ), $ } 不含 *，
+      两个格子都按移进 <span class="m">s7</span> 处理，表就干净了 —— 详见笔记 SLR(1) 一节。
+    </p>
+    <p class="tblnote">
+      <span class="m">S<sub>j</sub></span> 移进项：圆点后是终结符 ·
+      <span class="m">r<sub>j</sub></span> 归约项：LR(0) 对整行所有终结符和 $ 都填 ·
+      <span class="m">acc</span> 接受 · GOTO 数字 = 非终结符转移目标 · 空白 = 报错
+    </p>
+  </section>
+
+</div>
+
+<script>
+/* ================= 数据 ================= */
+const PRODS = [
+  {lhs:"S'", rhs:['E']},          // 0：拓广。r 编号从 1 开始
+  {lhs:'E', rhs:['E','+','T']},   // 1
+  {lhs:'E', rhs:['T']},           // 2
+  {lhs:'T', rhs:['T','*','F']},   // 3
+  {lhs:'T', rhs:['F']},           // 4
+  {lhs:'F', rhs:['(','E',')']},   // 5
+  {lhs:'F', rhs:['i']}            // 6
+];
+const SCAN = ['E','T','F','(',')','+','*','i'];  // 转移扫描顺序（非终结符在前）
+const ACT_COLS = ['i','+','*','(',')','$'];
+const GOT_COLS = ['E','T','F'];
+const NT = new Set(['E','T','F']);
+
+/* ================= 核心算法：CLOSURE + GOTO（BFS） ================= */
+const afterDot = it => PRODS[it.p].rhs[it.dot];
+const keyOf = items => items.map(x => x.p + ':' + x.dot).sort().join('|');
+
+/* 闭包：返回完整项目集 + “哪个父项目派生了哪些新项目”的事件表。
+   一次扫描中，同一父项目派生的项目归入同一个事件。 */
+function closure(kernel){
+  const items = kernel.map(x => ({...x}));
+  const evs = [];
+  for(let i = 0; i < items.length; i++){
+    const it = items[i];
+    const B = afterDot(it);
+    if(B && NT.has(B)){
+      for(let p = 1; p < PRODS.length; p++){
+        if(PRODS[p].lhs === B && !items.some(x => x.p === p && x.dot === 0)){
+          const n = {p, dot: 0};
+          items.push(n);
+          if(evs.length && evs[evs.length-1].pi === i) evs[evs.length-1].add.push(n);
+          else evs.push({pi: i, parent: {...it}, add: [n]});
+        }
+      }
+    }
+  }
+  return {items, evs};
+}
+
+/* 按创建顺序 BFS 造出全部 12 个状态 */
+const states = [], trans = {}, byKey = new Map();
+function makeState(kernel){
+  const c = closure(kernel);
+  const key = keyOf(c.items);
+  if(byKey.has(key)) return {id: byKey.get(key), isNew: false};
+  const id = states.length;
+  states.push({id, kernel: c.items.slice(0, kernel.length), items: c.items, evs: c.evs,
+               kernelSet: new Set(c.items.slice(0, kernel.length).map(x => x.p + ':' + x.dot))});
+  byKey.set(key, id);
+  trans[id] = {};
+  return {id, isNew: true, evs: c.evs};
+}
+makeState([{p: 0, dot: 0}]);   // I0 = CLOSURE({S'→·E})
+// 其余 11 个状态在下面生成步骤时按 BFS 惰性创建，保证演示顺序 = 构造顺序
+
+/* ================= 把全过程摊平成一维 steps =================
+   一次点击 = 一次变化：
+   阶段一  I0 种子 → 每次闭包派生 → 每次 GOTO 转移（新建 / 并入）
+   阶段二  每个状态的项目按四条规则逐条落格
+   阶段三  两处移进-归约冲突 + SLR 提示
+   ========================================================= */
+const cellVal = {};                       // 累积的表格内容
+const push = o => {
+  o.nS = states.length;
+  o.nT = Object.values(trans).reduce((s, t) => s + Object.keys(t).length, 0);
+  o.nC = Object.keys(cellVal).length;
+  o.ss = {...cellVal};
+  steps.push(o);
+};
+const steps = [];
+
+/* 阶段一：I0 种子 */
+push({
+  type: 'init', focus: 0,
+  items: states[0].kernel,
+  hl: [0]
+});
+/* I0 的闭包派生（每个“父项目展开”一次点击） */
+(function emit(pos, adds){
+  for(const ev of states[pos].evs){
+    adds = adds.concat(ev.add);
+    push({
+      type: 'closure', focus: pos,
+      parent: ev.parent, added: ev.add,
+      items: states[pos].kernel.concat(adds),
+      addFrom: states[pos].kernel.length + adds.length - ev.add.length
+    });
+  }
+})(0, []);
+
+/* 阶段一：全部转移（BFS 顺序） */
+const q2 = [0];
+while(q2.length){
+  const k = q2.shift();
+  for(const X of SCAN){
+    const srcs = [], moved = [];
+    states[k].items.forEach(it => {
+      if(afterDot(it) === X){
+        srcs.push(it);
+        moved.push({p: it.p, dot: it.dot + 1});
+      }
+    });
+    if(!moved.length) continue;
+    const res = makeState(moved);
+    trans[k][X] = res.id;
+    if(res.isNew){
+      push({
+        type: 'goto', focus: k, from: k, sym: X,
+        srcs, moved, tgt: res.id, isNew: true,
+        items: states[k].items,
+        hl: srcs.map(it => states[k].items.indexOf(it)),
+        hlrow: k
+      });
+      (function emit(pos, adds){
+        for(const ev of states[pos].evs){
+          adds = adds.concat(ev.add);
+          push({
+            type: 'closure', focus: pos,
+            parent: ev.parent, added: ev.add,
+            items: states[pos].kernel.concat(adds),
+            addFrom: states[pos].kernel.length + adds.length - ev.add.length,
+            prev: pos
+          });
+        }
+      })(res.id, []);
+      q2.push(res.id);
+    }else{
+      push({
+        type: 'goto', focus: k, from: k, sym: X,
+        srcs, moved, tgt: res.id, isNew: false,
+        items: states[k].items,
+        hl: srcs.map(it => states[k].items.indexOf(it)),
+        hlrow: k,
+        merge: res.id === null ? null : res.id
+      });
+    }
+  }
+}
+
+/* 阶段二的桥梁：说明四条规则 */
+push({type: 'bridge', focus: 0, items: states[0].items, hl: [], hlrow: 0});
+
+/* 阶段二：逐状态填表 */
+for(let s = 0; s < states.length; s++){
+  const q = s, its = states[q].items;
+  const doneNT = new Set();
+  its.forEach(it => {
+    const idx = its.indexOf(it);
+    const B = afterDot(it);
+    if(B === undefined){
+      if(it.p === 0){                       /* 规则③ 接受 */
+        cellVal['a:' + q + ':$'] = 'acc';
+        push({type: 'fill', rule: 'acc', focus: q, item: it, items: its,
+              hl: [idx], hlrow: q, hlcols: ['$'], flash: ['a:' + q + ':$']});
+      }else{                                /* 规则④ 归约：整行铺满 */
+        const writes = [];
+        for(const t of ACT_COLS){
+          const key = 'a:' + q + ':' + t;
+          const prior = cellVal[key];
+          cellVal[key] = (prior && prior !== 'r' + it.p) ? prior + '/r' + it.p : 'r' + it.p;
+          writes.push(key);
+        }
+        push({type: 'fill', rule: 'reduce', focus: q, item: it, items: its,
+              hl: [idx], hlrow: q, flash: writes});
+      }
+    }else if(NT.has(B)){                    /* 规则② 状态转换：GOTO 列 */
+      if(doneNT.has(B)) return;             // 同一非终结符只写一次，但高亮全部相关项目
+      doneNT.add(B);
+      const j = trans[q][B];
+      cellVal['g:' + q + ':' + B] = String(j);
+      push({type: 'fill', rule: 'goto', focus: q, item: it, sym: B, tgt: j, items: its,
+            hl: its.map((x, i) => afterDot(x) === B ? i : -1).filter(i => i >= 0),
+            hlrow: q, hlcols: [B], flash: ['g:' + q + ':' + B]});
+    }else{                                  /* 规则① 移进（可能撞上已写的归约） */
+      const j = trans[q][B];
+      const key = 'a:' + q + ':' + B;
+      const prior = cellVal[key];
+      let conflict = null;
+      if(prior){ conflict = prior; cellVal[key] = prior + '/s' + j; }
+      else cellVal[key] = 's' + j;
+      push({type: 'fill', rule: 'shift', focus: q, item: it, sym: B, tgt: j, prior: conflict,
+            items: its, hl: [idx], bad: !!conflict, hlrow: q, hlcols: [B], flash: [key]});
+    }
+  });
+}
+
+/* 阶段三：冲突盘点 */
+const confRP = {2: 2, 9: 1};
+[2, 9].forEach(q => {
+  push({
+    type: 'conf', focus: q, rp: confRP[q], sym: '*',
+    cell: 'a:' + q + ':*',
+    items: states[q].items,
+    bad: true,
+    /* 同时高亮：归约项（圆点在末尾）与移进项（圆点后是 *） */
+    hl: states[q].items.map((it, i) =>
+      ((afterDot(it) === undefined && it.p > 0) || afterDot(it) === '*') ? i : -1
+    ).filter(i => i >= 0),
+    warn: [q], hlrow: q, hlcols: ['*']
+  });
+});
+push({
+  type: 'summary', focus: 9, rp: 1, sym: '*',
+  cell: 'a:9:*',
+  items: states[9].items,
+  hl: [0, 1], bad: true,
+  warn: [2, 9], hlrow: 9, hlcols: ['*'], reveal: true
+});
+
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const I = id => 'I<sub>' + id + '</sub>';
+const DOT = '<span class="d">·</span>';
+const fmt = v => String(v).replace(/^([sr])(\d+)$/, '$1<sub>$2</sub>')
+                           .replace(/([sr])(\d+)\/([sr])(\d+)/, '$1<sub>$2</sub>/$3<sub>$4</sub>');
+function itemHTML(it){
+  const p = PRODS[it.p];
+  let h = esc(p.lhs) + ' → ';
+  p.rhs.forEach((s, j) => { if(j === it.dot) h += DOT; h += esc(s); });
+  if(it.dot === p.rhs.length) h += DOT;
+  return h;
+}
+function itemPlain(it){
+  const p = PRODS[it.p];
+  let h = p.lhs + ' → ';
+  p.rhs.forEach((s, j) => { if(j === it.dot) h += '·'; h += s; });
+  if(it.dot === p.rhs.length) h += '·';
+  return h;
+}
+
+/* ================= 文案 ================= */
+function zoneOf(st){
+  if(st.type === 'conf' || st.type === 'summary') return '阶段三 · 冲突盘点';
+  if(st.type === 'bridge' || st.type === 'fill') return '阶段二 · 按 LR(0) 四条规则填表';
+  return '阶段一 · 从项目集造 DFA';
+}
+function noteOf(st){
+  if(st.type === 'conf' || st.type === 'summary') return 'LR(0) 失败，SLR(1) 详见笔记';
+  if(st.type === 'bridge' || st.type === 'fill') return '已填 ' + st.nC + ' / 57 格';
+  return '已造 ' + st.nS + ' / 12 个状态 · 已用 ' + st.nT + ' / 22 条转移';
+}
+function kindOf(st){
+  switch(st.type){
+    case 'init':    return '拓广 · 构造 I<sub>0</sub>';
+    case 'closure': return '求 CLOSURE(' + I(st.focus) + ') · 加入派生项目';
+    case 'goto':    return 'GOTO(' + I(st.from) + ', ' + esc(st.sym) + ') · ' + (st.isNew ? '新建状态' : '并入已有状态');
+    case 'bridge':  return '阶段跨越 · 开始填表';
+    case 'fill':
+      if(st.rule === 'shift')   return st.conflict ? '规则① 移进项目 × 冲突' : '规则① 移进项目';
+      if(st.rule === 'goto')    return '规则② 状态转换（GOTO 列）';
+      if(st.rule === 'acc')     return '规则③ 接受项目';
+      return '规则④ 归约项目（整行铺满）';
+    case 'conf':    return '冲突 · 状态 ' + st.focus;
+    case 'summary': return '结论 · LR(0) 失败，SLR(1) 可以救';
+  }
+}
+function formulaOf(st){
+  switch(st.type){
+    case 'init':
+      return I(0) + ' = CLOSURE({ S\' → · E })';
+    case 'closure':{
+      const B = afterDot(st.parent);
+      return itemHTML(st.parent) + ' 圆点后是 <span class="g">' + esc(B) + '</span> ⇒ 加入 ' +
+             st.added.map(itemHTML).join('、');
+    }
+    case 'goto':
+      if(st.isNew) return 'GOTO(' + I(st.from) + ', ' + esc(st.sym) + ') → <span class="s">新建 ' + I(st.tgt) + '</span>';
+      return 'GOTO(' + I(st.from) + ', ' + esc(st.sym) + ') → <span class="g">并入 ' + I(st.tgt) + '</span>';
+    case 'bridge':
+      return '12 个状态 · 22 条转移，DFA 完成';
+    case 'fill':
+      if(st.rule === 'shift'){
+        if(st.conflict)
+          return 'ACTION[<span class="k">' + st.focus + '</span>, ' + esc(st.sym) + '] 已是 <span class="e">' +
+                 fmt(st.conflict) + '</span>，还要 <span class="s">s<sub>' + st.tgt + '</sub></span>';
+        return 'ACTION[<span class="k">' + st.focus + '</span>, ' + esc(st.sym) + '] = <span class="s">s<sub>' + st.tgt + '</sub></span>';
+      }
+      if(st.rule === 'goto')
+        return 'GOTO[<span class="k">' + st.focus + '</span>, <span class="g">' + esc(st.sym) + '</span>] = <span class="g">' + st.tgt + '</span>';
+      if(st.rule === 'acc')
+        return 'ACTION[<span class="k">' + st.focus + '</span>, $] = <span class="n">acc</span>';
+      return itemHTML(st.item) + ' ⇒ ACTION[' + st.focus + ', i … $] 全部 = <span class="e">r<sub>' + st.item.p + '</sub></span>';
+    case 'conf':
+      return 'ACTION[' + st.focus + ', ' + esc(st.sym) + '] 要同时填 <span class="e">r<sub>' + st.rp + '</sub></span> 和 <span class="s">s<sub>7</sub></span>';
+    case 'summary':
+      return '冲突格：ACTION[2, *] 与 ACTION[9, *]';
+  }
+}
+function sayOf(st){
+  switch(st.type){
+    case 'init':
+      return '拓广产生式 <b>S\' → E</b> 的初始项目进 ' + I(0) + '。圆点在最前：还什么都没认出来，接下来一次次求闭包把它填满。';
+    case 'closure':{
+      const B = afterDot(st.parent);
+      return '圆点后面是非终结符 <b>' + esc(B) + '</b>——它还没被认出来。把 ' + esc(B) + ' 开头的全部产生式都带着「刚出发」的圆点放进 ' +
+             I(st.focus) + (st.added.length > 1 ? '，这一次加了 <b>' + st.added.length + ' 条</b>。' : '。');
+    }
+    case 'goto':
+      if(st.isNew)
+        return '把 ' + I(st.from) + ' 中圆点后是 <b>' + esc(st.sym) + '</b> 的项目圆点右移一位（右边蓝框），求闭包后得到一份全新的项目集，编号 ' + I(st.tgt) + '。';
+      return '圆点右移再求闭包，结果与 ' + I(st.tgt) + ' 完全相同——DFA 不存重复状态，转移直接指向它。';
+    case 'bridge':
+      return '四个填表规则：圆点后是<b>终结符</b>→填 s；圆点后是<b>非终结符</b>→填 GOTO；<b>S\'→E·</b>→acc；<b>归约项目</b>→整行都填 r。';
+    case 'fill':
+      if(st.rule === 'shift'){
+        if(st.conflict)
+          return '这一格刚被归约整行写入了 <b>' + fmt(st.prior) + '</b>，移进项又要填 <b>s<sub>' + st.tgt + '</sub></b>。同一格装不下两个动作——<b>移进-归约冲突</b>，标红。';
+        return '圆点后是终结符 <b>' + esc(st.sym) + '</b>：下一个输入若是 ' + esc(st.sym) + '，就移进并转到 ' + I(st.tgt) + '（转移目标在阶段一已算好）。';
+      }
+      if(st.rule === 'goto')
+        return '高亮项目的圆点后都是 <b>' + esc(st.sym) + '</b>：沿 ' + esc(st.sym) + ' 的转移通向 ' + I(st.tgt) + '，填进 GOTO 列。';
+      if(st.rule === 'acc')
+        return '<b>' + esc(itemPlain(st.item)) + '</b>：整句已识别成 S\'，输入也读完了——接受。';
+      return '圆点到底 = 识别完毕。LR(0) 不看下一个输入是啥：本行 <b>i 到 $ 六个格子</b>统统填 r<sub>' + st.item.p + '</sub>。盲目——冲突就埋在这里。';
+    case 'conf':
+      return '状态 ' + st.focus + ' 里，<b>' + esc(itemPlain(st.items[st.hl[0]])) + '</b> 要求整行归约，' +
+             '<b>' + esc(itemPlain(st.items[st.hl[1]])) + '</b> 偏要在 * 上移进。LR(0) 无从选择，这一格标红。';
+    case 'summary':
+      return '<b>' + I(2) + '</b> 与 <b>' + I(9) + '</b> 的 * 格都撞车：LR(0) 文法判负。SLR(1) 的修补——只在 <b>a ∈ FOLLOW(U)</b> 时才填 r；' +
+             'FOLLOW(E) = { +, ), $ } 不含 *，两个格子都保留移进 s<sub>7</sub>，表就无冲突了。';
+  }
+}
+
+/* ================= 建表（一次） ================= */
+const tds = [];
+(function(){
+  let h = '<thead><tr><th class="corner" rowspan="2">状态</th>' +
+          '<th class="grp" colspan="6">ACTION</th>' +
+          '<th class="grp" colspan="3">GOTO</th></tr><tr>';
+  ACT_COLS.forEach(c => h += '<th data-col="' + esc(c) + '">' + esc(c) + '</th>');
+  GOT_COLS.forEach(c => h += '<th data-col="' + c + '">' + c + '</th>');
+  h += '</tr></thead><tbody>';
+  for(let q = 0; q < 12; q++){
+    h += '<tr><th data-row="' + q + '">' + q + '</th>';
+    ACT_COLS.forEach(c => h += '<td data-c="a" data-q="' + q + '" data-col="' + esc(c) + '"></td>');
+    GOT_COLS.forEach(c => h += '<td data-c="g" data-q="' + q + '" data-col="' + c + '"></td>');
+    h += '</tr>';
+  }
+  $('#table').innerHTML = h + '</tbody>';
+  document.querySelectorAll('#table td').forEach(td => tds.push(td));
+})();
+
+/* 状态条 12 枚 chips，一次建好 */
+(function(){
+  let h = '';
+  for(let q = 0; q < 12; q++) h += '<div class="chip ghost" id="chip' + q + '">I' + q + '</div>';
+  $('#chips').innerHTML = h;
+})();
+
+/* ================= 渲染 ================= */
+let idx = 0;
+const TOTAL = steps.length;
+
+function render(){
+  const st = steps[idx];
+
+  $('#zonecap').innerHTML = zoneOf(st) + '<span class="note">' + noteOf(st) + '</span>';
+
+  /* chips */
+  for(let q = 0; q < 12; q++){
+    const el = $('#chip' + q);
+    const born = q < st.nS;
+    const cls = ['chip'];
+    if(!born) cls.push('ghost');
+    if(born && q === st.focus) cls.push('on');
+    if((st.warn || []).includes(q)) cls.push('warn');
+    if(st.merge === q) cls.push('mergeflash');
+    el.className = cls.join(' ');
+  }
+
+  /* 项目集 */
+  let h = '';
+  st.items.forEach((it, i) => {
+    const isK = states[st.focus].kernelSet.has(it.p + ':' + it.dot);
+    const cls = ['item', isK ? 'kernel' : 'derived'];
+    if((st.hl || []).includes(i)) cls.push(st.bad ? 'bad' : (st.type === 'goto' ? 'mov' : 'par'));
+    if(st.type === 'closure' && i >= st.addFrom) cls.push('added');
+    const tag = it.p === 0 ? '拓广' : (afterDot(it) === undefined ? 'r' + it.p : '');
+    h += '<div class="' + cls.filter(Boolean).join(' ') + '">' + itemHTML(it) +
+         (tag ? '<span class="tag">' + tag + '</span>' : '') + '</div>';
+  });
+  $('#items').innerHTML = h;
+
+  /* 转移预览框 */
+  const kb = $('#kbox');
+  if(st.type === 'init'){
+    kb.hidden = false;
+    $('#kcap').textContent = '种子项目';
+    $('#kbody').innerHTML = '<div class="ki">' + itemHTML({p: 0, dot: 0}) + '</div>';
+    $('#kres').innerHTML = '<span class="n">接下来求 CLOSURE：体会派生项目怎么进来</span>';
+  }else if(st.type === 'goto'){
+    kb.hidden = false;
+    $('#kcap').textContent = '把 ' + I(st.from) + ' 中圆点后是 ' + esc(st.sym) + ' 的项目圆点右移一位';
+    $('#kbody').innerHTML = st.moved.map(it => '<div class="ki">' + itemHTML(it) + '</div>').join('');
+    const kr = $('#kres');
+    kr.className = 'kres ' + (st.isNew ? 'new' : 'merge');
+    kr.innerHTML = st.isNew
+      ? '求 CLOSURE 后 = 全新项目集 ' + I(st.tgt)
+      : '求 CLOSURE 后 = 已有 ' + I(st.tgt) + '，并入';
+  }else{
+    kb.hidden = true;
+  }
+
+  /* 说明 */
+  $('#kind').innerHTML = kindOf(st);
+  $('#formula').innerHTML = formulaOf(st);
+  $('#say').innerHTML = sayOf(st);
+
+  /* 表 */
+  tds.forEach(td => {
+    const key = td.dataset.c + ':' + td.dataset.q + ':' + td.dataset.col;
+    const v = st.ss[key];
+    const cls = [];
+    if(v){
+      if(v.includes('/')) cls.push('conf');
+      else if(v === 'acc') cls.push('acc');
+      else if(v[0] === 's') cls.push('s');
+      else if(v[0] === 'r') cls.push('r');
+      else cls.push('g');
+    }
+    if(st.flash && st.flash.includes(key)) cls.push('jflash');
+    td.className = cls.join(' ');
+    td.innerHTML = v ? fmt(v) : '';
+  });
+  document.querySelectorAll('#table th[data-row]').forEach(th =>
+    th.className = (th.dataset.row == st.hlrow) ? 'row-on' : '');
+  document.querySelectorAll('#table thead th[data-col]').forEach(th =>
+    th.className = (st.hlcols || []).includes(th.dataset.col) ? 'col-on' : '');
+  if(st.cell){   /* 冲突格套红框（阶段三） */
+    const td = tds.find(td => td.dataset.c + ':' + td.dataset.q + ':' + td.dataset.col === st.cell);
+    if(td) td.className += ' on';
+  }
+  $('#slrline').hidden = !st.reveal;
+
+  $('#stepno').textContent = idx + ' / ' + TOTAL;
+  $('#btnPrev').disabled = idx === 0;
+  $('#btnNext').disabled = idx === TOTAL - 1;
+  $('#btnReset').disabled = idx === 0;
+}
+
+$('#btnNext').onclick = () => { if(idx < TOTAL - 1){ idx++; render(); } };
+$('#btnPrev').onclick = () => { if(idx > 0){ idx--; render(); } };
+$('#btnReset').onclick = () => { idx = 0; render(); };
+
+render();
+
+/* 调试：index.html#s=40 */
+const m = location.hash.match(/s=(\d+)/);
+if(m){ idx = Math.min(+m[1], TOTAL - 1); render(); }
+</script>
+</body>
+</html>
