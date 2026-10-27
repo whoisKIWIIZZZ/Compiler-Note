@@ -70,64 +70,6 @@
         - 如果action对应着acc和空白,相对应着代表着接受和错误.
 ]
 
-#example[
-    #figure(image("/assets/82b2eb04b8f3761d45f197b0b050d991_720.png", width: 60%), caption: [
-        $S_i$表示state,$r_j$表示reduction,空白是error.GOTO里的空白不是error,为什么?
-        // 因为,有的状态本来就不允许有state转化,例如规约的一些state,他只能做符号转化而不是状态转化
-    ])
-    文法是$cg[E]:$
-    $
-        & 1 quad quad quad E->E+T \
-        & 2 quad quad quad E->T \
-        & 3 quad quad quad T->T*F \
-        & 4 quad quad quad T->F \
-        & 5 quad quad quad F ->(E) \
-        & 6 quad quad quad F ->i
-    $
-
-    为了分析$i+i*i$,完整分析过程如下:
-    #let c(text) = box(
-        fill: luma(235),
-        inset: (x: 5pt, y: 2pt),
-        radius: 3pt,
-        raw(text),
-    )
-
-    #table(
-        columns: (auto, auto, auto, auto),
-        align: (center + horizon, left + horizon, left + horizon, left + horizon),
-        stroke: none,
-        row-gutter: 1em,
-        column-gutter: 1.5em,
-
-        // 表头
-        text(weight: "bold")[步骤],
-        text(weight: "bold")[分析栈],
-        text(weight: "bold")[剩余输入],
-        text(weight: "bold")[ACTION],
-
-        // 数据行
-        [1], c("0"), c("i+i*i$"), raw("s5"),
-        [2], c("0 i 5"), c("+i*i$"), raw("r6: F→i"),
-        [3], c("0 F 3"), c("+i*i$"), raw("r4: T→F"),
-        [4], c("0 T 2"), c("+i*i$"), raw("r2: E→T"),
-        [5], c("0 E 1"), c("+i*i$"), raw("s6"),
-        [6], c("0 E 1 + 6"), c("i*i$"), raw("s5"),
-        [7], c("0 E 1 + 6 i 5"), c("*i$"), raw("r6: F→i"),
-        [8], c("0 E 1 + 6 F 3"), c("*i$"), raw("r4: T→F"),
-        [9], c("0 E 1 + 6 T 9"), c("*i$"), raw("s7"),
-        [10], c("0 E 1 + 6 T 9 * 7"), c("i$"), raw("s5"),
-        [11], c("0 E 1 + 6 T 9 * 7 i 5"), c("$"), raw("r6: F→i"),
-        [12], c("0 E 1 + 6 T 9 * 7 F 10"), c("$"), raw("r3: T→T*F"),
-        [13], c("0 E 1 + 6 T 9"), c("$"), raw("r1: E→E+T"),
-        [14], c("0 E 1"), c("$"), raw("acc"),
-    )
-    为什么第三步变成了3?这是因为,第二步发生了r6这个reduction,我们需要根据当前state(0)去更新state.此时符号是F,查GOTO表发现是3,遂改写.
-]
-// 为什么上面每一行这么松散
-// 我真的觉得可以写个html模拟一下这个过程
-
-
 空产生式的LR(0)项目只有一个。
 
 == 状态转移图的构
@@ -162,7 +104,7 @@ $ A -> X Y Z · $
     [移进项目], [点后是终结符，如 $U ->x . a y$], [等下一个符号], [移进],
     [待约项目], [点后是非终结符，如 $U ->x . V y$], [等推导], [需加入闭包],
     [归约项目], [点在末尾，如 $U ->x .$], [识别完毕], [归约（可能冲突）],
-     [接受项目], [点前面是开始符号,如 $S' ->S .$], [-], [-],
+    [接受项目], [点前面是开始符号,如 $S' ->S .$], [-], [-],
 )
 
 
@@ -195,15 +137,13 @@ $ A -> X Y Z · $
 
 === 从项目集到 DFA
 
-首先,我們可以自然的得到一个NFA,状态是LR(0)的*项目*(而不是项目集),例如,这个图.
+首先自然的得到一个NFA,状态是LR(0)的*项目*(而不是项目集)
 #example[
     #image("/assets/image-20.png")
 ]
 容易看到,其中的规则是:
 - 项目$cal(X):[A-> alpha. X beta],cal(Y):[A->alpha X. beta]$,那么有边$cal(X) ->^X cal(Y)$.
-- 项目$cal(X):[A-> alpha. X beta],cal(Z):[B->. gamma]$,那么有边$cal(X) ->^epsilon cal(Z)$.
-
-
+- 项目$cal(X):[A-> alpha. X beta],cal(Z):[X->. gamma]$,那么有边$cal(X) ->^epsilon cal(Z)$.
 
 确定这个NFA成DFA,就是我们的所求.这里的NFA*只有$epsilon$不确定性*,所以确定化非常简单,只需要求闭包.
 
@@ -213,8 +153,6 @@ $ A -> X Y Z · $
 上述工作重复到$ei$(I)不再扩大为止，此$ei$(I)即为所求的一个项目子集，将其作为DFA的一个状态。
 === SLR(1)
 移进-归约冲突下（例如$E -> E + T ·$、$T -> T · * F$），同时满足移进与归约条件，程序不知道选择哪个。
-// 请输入文本@zoomy
-// maybe later...
 
 ==== 移进-归约冲突
 #example[
@@ -239,8 +177,10 @@ $ A -> X Y Z · $
     两个项目都要求归约，即*归约-归约冲突*。
 ]
 
+==== SLR(1)的规则
+相比于LR(0)只修改了一条：
 
-
+如果状态$I_i$有归约项目 $A arrow.r alpha .$，只有当当前输入符号$a$属于 $"FOLLOW"(A)$ 时，才在 $"ACTION"[i, a]$ 填 $r_j$；否则留空（报错）。
 
 == LR(1)
 在SLR(1)中用的是全局的 FOLLOW 集。但不是FOLLOW集中所有的都可能出现在当前句柄的后面。
@@ -266,8 +206,24 @@ LR(0) 项目是 $A → alpha . beta$，只记录了“看到了哪一步”。
 === LR(1)分析表的构造
 构造DFA的状态映射：
 + 若状态 $I_i$ 中含有项目 $[A -> alpha . X beta, a]$ ($X in V$, $alpha, beta$ 为任一符号串)，则从 $I_i$ 出发，以 $X$ 为标记作一弧，引出一新状态 $I_j$ #note[同一句柄的不同识别状态，则环境相同]
-      
-      $ I_j = "CLOSURE"({ [A -> alpha X . beta, a] | [A -> alpha . X beta, a] "在" I_i "中" }) $
-      
-      $I_i$ 和 $I_j$ 之间的这种转换关系用函数 $"GOTO"(I_i, X) = I_j$ 表示。
+
+    $ I_j = "CLOSURE"({ [A -> alpha X . beta, a] | [A -> alpha . X beta, a] "在" I_i "中" }) $
+
+    $I_i$ 和 $I_j$ 之间的这种转换关系用函数 $"GOTO"(I_i, X) = I_j$ 表示。
 + 若 $I_i$ 和 $I_j$ 相同，则取消 $I_j$，而 $"GOTO"$ 函数为 $"GOTO"(I_i, X) = I_i$
+
+
+== LALR(1)
+// 找个人来写，我觉得@zmy就很合适
+
+// 没听……不会……
+
+== 二义性文法冲突的处理
+一般选择SLR(1)，然后人为地消除冲突。
+#figure(image("/assets/image-21.png"))
+
+右上角黄色框中的状态有移进-归约冲突。
+
+对于$I_7$：栈顶$E+E$，遇到\*，就移进（\*优先级高）；遇到+，就归约（加法左结合）。
+$I_8$同理。
+//好困
