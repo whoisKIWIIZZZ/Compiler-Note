@@ -103,7 +103,7 @@
 === $fff$、$fo$的求法
 $ op("FOLLOW")(U) = { a | S arrow.r.double^* ... U a ... , a in V_T } $
 
-+ 对于文法的开始/识别符号 S，令 \$ in op("FOLLOW")(S);
++ 对于文法的开始/识别符号 S，令 $\$ in op("FOLLOW")(S)$;
 + $A -> alpha B beta$，则 $op("FIRST")(beta)$ 中的非 $epsilon$ 元素 属于 $op("FOLLOW")(B)$;
 + $A -> alpha B$，或$A -> alpha B beta$ 而$op("FIRST")(beta)$含有 $epsilon$，则$op("FOLLOW")(A)$ 的元素属于 $op("FOLLOW")(B)$。
 
@@ -112,7 +112,7 @@ $ op("FOLLOW")(U) = { a | S arrow.r.double^* ... U a ... , a in V_T } $
     + 别去管这个A可以是空、B可不可以空。
     + 如果A可以不为空，那就把A可以产生的所有第一个除了空的终结符都拿出来。
     + 如果A还可以为空，那就跳过A去看B，对B去进行同样的操作（#note[B可以不为空？把B可以产生的所有第一个除了空的终结符都拿出来；B可以为空？接着看C...]）。
-    + 如果括号里面包裹的这一整块都可以是空的，那就把epsilon加上。
+    + 如果括号里面包裹的这一整块都可以是空的，那就把 $epsilon$ 加上。
 + follow集合：求$fo(C)$，一般对一个非终结符计算follow集合，
     + 去找这个非终结符（比如A）在哪些产生式的右边出现过。
     + 找这个非终结符后面跟着的那个符号到底是什么东西，把它的 $fff$ 集合去掉空的拿过来（#note[规则2]）；
@@ -140,9 +140,18 @@ $ op("FOLLOW")(U) = { a | S arrow.r.double^* ... U a ... , a in V_T } $
         - $X_1 X_2 dots X_j =>^star epsilon ==>fff(X_std.strong(j+1))-{epsilon} subset fff(alpha);$if$j=n==>epsilon in fff(alpha)$.
 ]
 这里根据定义很直观,只需要解释为什么$j+1$,是因为我们总能找到一个推导,使得$X =>^star epsilon fff(Y_std.strong(j+1)) dots$.
-// 写的太抽象了，需要加上人话解读
-// 傻逼计院的🐴--了 绷
-// SELECT集合 shoudao
+
+#unim[
+    // 这里是通俗易懂的解释
+    LL(1) 文法是，在每一步推导时、仅根据下一个字符就可以判断出选择哪个候选式的文法。因为在选择候选式时不需要试错，所以分析过程不需要回溯。
+
+    求解 $"FIRST"(alpha)$ 的方法：
+    + 当 $alpha$ 只包含一个符号时。若 $alpha$ 为终结符则为其本身；若 $alpha$ 为非终结符（如 $A$）则找出所有 $A -> ...$ 的产生式，对所有可能性取并集。若有 $A->B...$ 这种形式，则 `FIRST(A)+=FIRST(B)`，把 $"FIRST"(B)$ 纳入 $"FIRST"(A)$ 中。
+    + 若 $alpha$ 包含多个符号（如 $alpha=X_1 X_2 ... X_n$），则求“最长的、可产生空串的”非终结符前缀，把这个前缀中所有非终结符的 $"FIRST"$ 集合纳入 $"FIRST"(alpha)$。
+    + 特别的，若 $alpha->epsilon$，则 $epsilon$ 也应当纳入 $"FIRST"(alpha)$ 中。
+
+    为什么 $j+1$？当前 $j$ 个非终结符 $X_1X_2...X_j => epsilon$ 时，$X_(j+1)$ 就跑到了最前面。
+]
 
 #definition[SELECT集合][
     形如 $U -> alpha_1 | alpha_2 | ... | alpha_n$ 的产生式，$"SELECT"(U -> alpha)$的定义如下：
